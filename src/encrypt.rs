@@ -54,7 +54,7 @@ pub fn encrypt(
 /// let message = String::from("hello");
 /// let ciphertext_string = ring_lwe::encrypt::encrypt_string(pk_string, &message, &params, None);
 /// ```
-pub fn encrypt_string(pk_base64: &String, message: &String, params: &Parameters, seed: Option<u64>) -> String {
+pub fn encrypt_string(pk_base64: &str, message: &str, params: &Parameters, seed: Option<u64>) -> String {
     // Decode the Base64 public key string
     let pk_arr: Vec<i64> = decompress(pk_base64);
 

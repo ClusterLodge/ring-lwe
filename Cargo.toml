@@ -34,11 +34,6 @@ path = "benches/benchmark_keygen.rs"
 harness = false
 
 [[bench]]
-name = "benchmark_encrypt"
-path = "benches/benchmark_encrypt.rs"
-harness = false
-
-[[bench]]
-name = "benchmark_decrypt"
-path = "benches/benchmark_decrypt.rs"
+name = "benchmark_encrypt_decrypt"
+path = "benches/benchmark_encrypt_decrypt.rs"
 harness = false
