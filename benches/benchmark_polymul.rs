@@ -1,11 +1,11 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use ring_lwe::utils::{polymul, polymul_fast, Parameters, gen_uniform_poly};
 use ntt::omega;
 use polynomial_ring::Polynomial;
+use ring_lwe::utils::{gen_uniform_poly, polymul, polymul_fast, Parameters};
 
 fn benchmark_polymul_small(c: &mut Criterion) {
     let p: i64 = 17; // Prime modulus
-    let n: usize = 8;  // Length of the NTT (must be a power of 2)
+    let n: usize = 8; // Length of the NTT (must be a power of 2)
     let omega = omega(p, n); // n-th root of unity
     let params = Parameters::default();
 

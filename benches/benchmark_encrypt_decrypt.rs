@@ -1,18 +1,16 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use ring_lwe::encrypt::{encrypt,encrypt_bytes};
-use ring_lwe::decrypt::{decrypt,decrypt_string};
-use ring_lwe::keygen::{keygen,keygen_string};
-use ring_lwe::utils::Parameters;
 use polynomial_ring::Polynomial;
+use ring_lwe::decrypt::{decrypt, decrypt_bytes};
+use ring_lwe::encrypt::{encrypt, encrypt_bytes};
+use ring_lwe::keygen::{keygen, keygen_bytes};
+use ring_lwe::utils::Parameters;
 
 fn bench_encrypt(c: &mut Criterion) {
     let params = Parameters::default();
     let (pk, _) = keygen(&params, None);
     let m_b = Polynomial::new(vec![0, 1, 0, 1, 1, 0, 1, 0]); // Example binary message
 
-    c.bench_function("encrypt", |b| {
-        b.iter(|| encrypt(&pk, &m_b, &params, None))
-    });
+    c.bench_function("encrypt", |b| b.iter(|| encrypt(&pk, &m_b, &params, None)));
 }
 
 const MESSAGE_SMALL: &str = "small";
@@ -39,23 +37,23 @@ const MESSAGE_2000: &str = concat!(
 
 fn bench_encrypt_bytes_small(c: &mut Criterion) {
     let params = Parameters::default();
-    let keypair = keygen_string(&params, None);
-    let pk_string = keypair.get("public").unwrap();
-    let message = MESSAGE_SMALL;
+    let keypair = keygen_bytes(&params, None);
+    let pk = keypair.public;
+    let message = MESSAGE_SMALL.as_bytes();
 
     c.bench_function("encrypt_string_small", |b| {
-        b.iter(|| encrypt_bytes(&pk_string, &message, &params, None))
+        b.iter(|| encrypt_bytes(&pk, &message, &params, None))
     });
 }
 
 fn bench_encrypt_bytes_2000(c: &mut Criterion) {
     let params = Parameters::default();
-    let keypair = keygen_string(&params, None);
-    let pk_string = keypair.get("public").unwrap();
-    let message = MESSAGE_2000;
+    let keypair = keygen_bytes(&params, None);
+    let pk = keypair.public;
+    let message = MESSAGE_2000.as_bytes();
 
     c.bench_function("encrypt_string_2000", |b| {
-        b.iter(|| encrypt_bytes(&pk_string, &message, &params, None))
+        b.iter(|| encrypt_bytes(&pk, &message, &params, None))
     });
 }
 
@@ -65,39 +63,42 @@ fn bench_decrypt(c: &mut Criterion) {
     let m_b = Polynomial::new(vec![0, 1, 0, 1, 1, 0, 1, 0]); // Example binary message
     let ct = encrypt(&pk, &m_b, &params, None);
 
-    c.bench_function("decrypt", |b| {
-        b.iter(|| decrypt(&sk, &ct, &params))
-    });
+    c.bench_function("decrypt", |b| b.iter(|| decrypt(&sk, &ct, &params)));
 }
 
 fn bench_decrypt_string_small(c: &mut Criterion) {
     let params = Parameters::default();
-    let keypair = keygen_string(&params, None);
-    let sk_string = keypair.get("secret").unwrap();
-    let pk_string = keypair.get("public").unwrap();
-    let message = MESSAGE_SMALL;
-    let ciphertext_string = encrypt_bytes(&pk_string, &message, &params, None);
+    let keypair = keygen_bytes(&params, None);
+    let sk = keypair.secret;
+    let pk = keypair.public;
+    let message = MESSAGE_SMALL.as_bytes();
+    let ciphertext_string = encrypt_bytes(&pk, &message, &params, None);
 
     c.bench_function("decrypt_string_small", |b| {
-        b.iter(|| decrypt_string(&sk_string, &ciphertext_string, &params))
+        b.iter(|| decrypt_bytes(&sk, &ciphertext_string, &params))
     });
 }
 
 fn bench_decrypt_string_2000(c: &mut Criterion) {
     let params = Parameters::default();
-    let keypair = keygen_string(&params, None);
-    let sk_string = keypair.get("secret").unwrap();
-    let pk_string = keypair.get("public").unwrap();
-    let message = MESSAGE_2000;
-    let ciphertext_string = encrypt_bytes(&pk_string, &message, &params, None);
+    let keypair = keygen_bytes(&params, None);
+    let sk = keypair.secret;
+    let pk = keypair.public;
+    let message = MESSAGE_2000.as_bytes();
+    let ciphertext_string = encrypt_bytes(&pk, &message, &params, None);
 
     c.bench_function("decrypt_string_2000", |b| {
-        b.iter(|| decrypt_string(&sk_string, &ciphertext_string, &params))
+        b.iter(|| decrypt_bytes(&sk, &ciphertext_string, &params))
     });
 }
 
-criterion_group!(benches,
-    bench_encrypt, bench_encrypt_bytes_small, bench_encrypt_bytes_2000,
-    bench_decrypt, bench_decrypt_string_small, bench_decrypt_string_2000
+criterion_group!(
+    benches,
+    bench_encrypt,
+    bench_encrypt_bytes_small,
+    bench_encrypt_bytes_2000,
+    bench_decrypt,
+    bench_decrypt_string_small,
+    bench_decrypt_string_2000
 );
 criterion_main!(benches);

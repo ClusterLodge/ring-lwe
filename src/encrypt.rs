@@ -1,4 +1,7 @@
-use crate::utils::{Parameters, mod_coeffs, polymul_fast, polyadd, gen_ternary_poly,compress,decompress};
+use crate::{
+    keygen::PubKey,
+    utils::{compress, gen_ternary_poly, mod_coeffs, polyadd, polymul_fast, Parameters},
+};
 use itertools::Itertools as _;
 use polynomial_ring::Polynomial;
 
@@ -18,12 +21,12 @@ use polynomial_ring::Polynomial;
 /// let ct = ring_lwe::encrypt::encrypt(&pk, &m, &params, None);
 /// ```
 pub fn encrypt(
-    pk: &[Polynomial<i64>; 2],    // Public key (b, a)
-    m: &Polynomial<i64>,        // Plaintext polynomial
+    pk: &[Polynomial<i64>; 2], // Public key (b, a)
+    m: &Polynomial<i64>,       // Plaintext polynomial
     params: &Parameters,       //parameters (n,q,t,f)
-    seed: Option<u64>            // Seed for random number generator
+    seed: Option<u64>,         // Seed for random number generator
 ) -> [Polynomial<i64>; 2] {
-    let (n,q,t,f,omega) = (params.n, params.q, params.t, &params.f, params.omega);
+    let (n, q, t, f, omega) = (params.n, params.q, params.t, &params.f, params.omega);
     // Scale the plaintext polynomial. use floor(m*q/t) rather than floor (q/t)*m
     let scaled_m = mod_coeffs(m * q / t, q);
 
@@ -33,7 +36,12 @@ pub fn encrypt(
     let u = gen_ternary_poly(n, seed);
 
     // Compute ciphertext components
-    let ct0 = polyadd(&polyadd(&polymul_fast(&pk[0], &u, q, f, omega), &e1, q, f),&scaled_m,q,f);
+    let ct0 = polyadd(
+        &polyadd(&polymul_fast(&pk[0], &u, q, f, omega), &e1, q, f),
+        &scaled_m,
+        q,
+        f,
+    );
     let ct1 = polyadd(&polymul_fast(&pk[1], &u, q, f, omega), &e2, q, f);
 
     [ct0, ct1]
@@ -41,23 +49,28 @@ pub fn encrypt(
 
 /// Encrypt bytes or string using the public key
 /// # Arguments:
-/// * `pk_string` - public key as a base64 encoded string
+/// * `pk` - public key as a bincode encoded slice of bytes
 /// * `message` - message to encrypt
 /// * `params` - ring-LWE parameters
 /// * `seed` - random seed
 /// # Returns:
-///	encrypted message as a base64 encoded string
+///	encrypted message as a bincode encoded vector
 /// # Example:
 /// ```
 /// let params = ring_lwe::utils::Parameters::default();
-/// let keys = ring_lwe::keygen::keygen_string(&params, None);
-/// let pk_string = keys.get("public").unwrap();
-/// let message = String::from("hello");
-/// let ciphertext_string = ring_lwe::encrypt::encrypt_bytes(pk_string, &message, &params, None);
+/// let keys = ring_lwe::keygen::keygen_bytes(&params, None);
+/// let pk = keys.public;
+/// let message = "hello".as_bytes();
+/// let ciphertext = ring_lwe::encrypt::encrypt_bytes(&pk, &message, &params, None);
 /// ```
-pub fn encrypt_bytes(pk_base64: &str, message: &impl AsRef<[u8]>, params: &Parameters, seed: Option<u64>) -> String {
+pub fn encrypt_bytes(
+    pk: &PubKey,
+    message: &[u8],
+    params: &Parameters,
+    seed: Option<u64>,
+) -> Vec<u8> {
     // Decode the Base64 public key string
-    let pk_arr: Vec<i64> = decompress(pk_base64);
+    let pk_arr = &pk.0;
 
     // Split the public key into two polynomials
     let pk_b = Polynomial::new(pk_arr[..params.n].to_vec());
@@ -66,14 +79,13 @@ pub fn encrypt_bytes(pk_base64: &str, message: &impl AsRef<[u8]>, params: &Param
 
     // Convert each byte into its 8-bit representation (MSB first)
     let message_bits = message
-        .as_ref()
         .iter()
         .flat_map(|byte| (0..8).rev().map(move |i| ((byte >> i) & 1) as i64));
 
-    let message_chunks = message_bits
-        .chunks(params.n); // Pack bits into polynomials of size `n`
-    // Convert bits into a vector of Polynomials
-    let message_blocks = message_chunks.into_iter()
+    let message_chunks = message_bits.chunks(params.n); // Pack bits into polynomials of size `n`
+                                                        // Convert bits into a vector of Polynomials
+    let message_blocks = message_chunks
+        .into_iter()
         .map(|chunk| Polynomial::new(chunk.collect_vec()));
 
     // Encrypt each integer message block

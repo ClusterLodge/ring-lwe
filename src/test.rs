@@ -1,8 +1,8 @@
 #[cfg(test)]  // This makes the following module compile only during tests
 mod tests {
-    use crate::keygen::{keygen, keygen_string};
+    use crate::keygen::{keygen, keygen_bytes};
     use crate::encrypt::{encrypt, encrypt_bytes};
-    use crate::decrypt::{decrypt, decrypt_string};
+    use crate::decrypt::{decrypt, decrypt_bytes};
     use crate::utils::{Parameters, polyadd, polymul, polymul_fast, mod_coeffs, nearest_int, gen_uniform_poly};
     use ntt::omega;
     use polynomial_ring::Polynomial;
@@ -11,14 +11,14 @@ mod tests {
     #[test]
     pub fn test_basic() {
         let seed = None; //set the random seed
-        let message = String::from("hello");
+        let message = "hello".as_bytes();
         let params = Parameters::default();
-        let keypair = keygen_string(&params,seed);
-        let pk_string = keypair.get("public").unwrap();
-        let sk_string = keypair.get("secret").unwrap();
-        let ciphertext_string = encrypt_bytes(&pk_string, &message, &params,seed);
-        let decrypted_message = decrypt_string(&sk_string, &ciphertext_string, &params);
-        assert_eq!(message, decrypted_message, "test failed: {} != {}", message, decrypted_message);
+        let keypair = keygen_bytes(&params,seed);
+        let pk = keypair.public;
+        let sk = keypair.secret;
+        let ciphertext_string = encrypt_bytes(&pk, &message, &params,seed);
+        let decrypted_message = decrypt_bytes(&sk, &ciphertext_string, &params);
+        assert_eq!(message, decrypted_message, "test failed");
     }
 
     // Test homomorphic addition property: ensure sum of encrypted plaintexts decrypts to plaintext sum
@@ -120,5 +120,25 @@ mod tests {
         let c_fast = polymul_fast(&a, &b, params.q, &params.f, params.omega);
 
         assert_eq!(c_std, c_fast, "test failed: {} != {}", c_std, c_fast);
+    }
+
+    #[test]
+    fn test_ct_len() {
+        let seed = None; //set the random seed
+        let params = Parameters::default();
+        let message_256 = concat!(
+            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        ).as_bytes();
+        // params.n is bit length.
+        assert_eq!(8 * message_256.len(), 2 * params.n, "invalid test: data is expected to be 2 blocks long");
+        let keypair = keygen_bytes(&params,seed);
+        let pk = keypair.public;
+        let ciphertext = encrypt_bytes(&pk, &message_256, &params,seed);
+        // two block length; add extra 8 bytes for bincode metadata.
+        // So, the cyphertext is 2 * 8 * 8 = 128 times larger than the plaintext.
+        assert_eq!(ciphertext.len(), 128 * message_256.len() + 8);
     }
 }
