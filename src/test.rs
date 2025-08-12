@@ -1,7 +1,7 @@
 #[cfg(test)]  // This makes the following module compile only during tests
 mod tests {
     use crate::keygen::{keygen, keygen_string};
-    use crate::encrypt::{encrypt, encrypt_string};
+    use crate::encrypt::{encrypt, encrypt_bytes};
     use crate::decrypt::{decrypt, decrypt_string};
     use crate::utils::{Parameters, polyadd, polymul, polymul_fast, mod_coeffs, nearest_int, gen_uniform_poly};
     use ntt::omega;
@@ -16,7 +16,7 @@ mod tests {
         let keypair = keygen_string(&params,seed);
         let pk_string = keypair.get("public").unwrap();
         let sk_string = keypair.get("secret").unwrap();
-        let ciphertext_string = encrypt_string(&pk_string, &message, &params,seed);
+        let ciphertext_string = encrypt_bytes(&pk_string, &message, &params,seed);
         let decrypted_message = decrypt_string(&sk_string, &ciphertext_string, &params);
         assert_eq!(message, decrypted_message, "test failed: {} != {}", message, decrypted_message);
     }

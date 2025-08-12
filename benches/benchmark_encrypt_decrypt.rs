@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use ring_lwe::encrypt::{encrypt,encrypt_string};
+use ring_lwe::encrypt::{encrypt,encrypt_bytes};
 use ring_lwe::decrypt::{decrypt,decrypt_string};
 use ring_lwe::keygen::{keygen,keygen_string};
 use ring_lwe::utils::Parameters;
@@ -37,25 +37,25 @@ const MESSAGE_2000: &str = concat!(
     "adipiscing. Phasellus ullamcorper ipsum rutrum nunc. Nunc nonummy metus. Vestib"
 );
 
-fn bench_encrypt_string_small(c: &mut Criterion) {
+fn bench_encrypt_bytes_small(c: &mut Criterion) {
     let params = Parameters::default();
     let keypair = keygen_string(&params, None);
     let pk_string = keypair.get("public").unwrap();
     let message = MESSAGE_SMALL;
 
     c.bench_function("encrypt_string_small", |b| {
-        b.iter(|| encrypt_string(&pk_string, &message, &params, None))
+        b.iter(|| encrypt_bytes(&pk_string, &message, &params, None))
     });
 }
 
-fn bench_encrypt_string_2000(c: &mut Criterion) {
+fn bench_encrypt_bytes_2000(c: &mut Criterion) {
     let params = Parameters::default();
     let keypair = keygen_string(&params, None);
     let pk_string = keypair.get("public").unwrap();
     let message = MESSAGE_2000;
 
     c.bench_function("encrypt_string_2000", |b| {
-        b.iter(|| encrypt_string(&pk_string, &message, &params, None))
+        b.iter(|| encrypt_bytes(&pk_string, &message, &params, None))
     });
 }
 
@@ -76,7 +76,7 @@ fn bench_decrypt_string_small(c: &mut Criterion) {
     let sk_string = keypair.get("secret").unwrap();
     let pk_string = keypair.get("public").unwrap();
     let message = MESSAGE_SMALL;
-    let ciphertext_string = encrypt_string(&pk_string, &message, &params, None);
+    let ciphertext_string = encrypt_bytes(&pk_string, &message, &params, None);
 
     c.bench_function("decrypt_string_small", |b| {
         b.iter(|| decrypt_string(&sk_string, &ciphertext_string, &params))
@@ -89,7 +89,7 @@ fn bench_decrypt_string_2000(c: &mut Criterion) {
     let sk_string = keypair.get("secret").unwrap();
     let pk_string = keypair.get("public").unwrap();
     let message = MESSAGE_2000;
-    let ciphertext_string = encrypt_string(&pk_string, &message, &params, None);
+    let ciphertext_string = encrypt_bytes(&pk_string, &message, &params, None);
 
     c.bench_function("decrypt_string_2000", |b| {
         b.iter(|| decrypt_string(&sk_string, &ciphertext_string, &params))
@@ -97,7 +97,7 @@ fn bench_decrypt_string_2000(c: &mut Criterion) {
 }
 
 criterion_group!(benches,
-    bench_encrypt, bench_encrypt_string_small, bench_encrypt_string_2000,
+    bench_encrypt, bench_encrypt_bytes_small, bench_encrypt_bytes_2000,
     bench_decrypt, bench_decrypt_string_small, bench_decrypt_string_2000
 );
 criterion_main!(benches);

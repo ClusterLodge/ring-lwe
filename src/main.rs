@@ -5,7 +5,7 @@ mod utils;
 mod test;
 
 use crate::keygen::keygen_string;
-use crate::encrypt::encrypt_string;
+use crate::encrypt::encrypt_bytes;
 use crate::decrypt::decrypt_string;
 use crate::utils::Parameters;
 use std::env;
@@ -50,7 +50,7 @@ fn main() {
         }
         let pk_string = &args[2];
         let message = &args[3];
-        let ciphertext_string = encrypt_string(pk_string,message,&params,None);
+        let ciphertext_string = encrypt_bytes(pk_string,message,&params,None);
         println!("{}", ciphertext_string);
     }
 

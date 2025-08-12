@@ -1,4 +1,5 @@
 use crate::utils::{Parameters, mod_coeffs, polymul_fast, polyadd, gen_ternary_poly,compress,decompress};
+use itertools::Itertools as _;
 use polynomial_ring::Polynomial;
 
 /// Encrypt a polynomial using the public key
@@ -38,7 +39,7 @@ pub fn encrypt(
     [ct0, ct1]
 }
 
-/// Encrypt a string using the public key
+/// Encrypt bytes or string using the public key
 /// # Arguments:
 /// * `pk_string` - public key as a base64 encoded string
 /// * `message` - message to encrypt
@@ -52,9 +53,9 @@ pub fn encrypt(
 /// let keys = ring_lwe::keygen::keygen_string(&params, None);
 /// let pk_string = keys.get("public").unwrap();
 /// let message = String::from("hello");
-/// let ciphertext_string = ring_lwe::encrypt::encrypt_string(pk_string, &message, &params, None);
+/// let ciphertext_string = ring_lwe::encrypt::encrypt_bytes(pk_string, &message, &params, None);
 /// ```
-pub fn encrypt_string(pk_base64: &str, message: &str, params: &Parameters, seed: Option<u64>) -> String {
+pub fn encrypt_bytes(pk_base64: &str, message: &impl AsRef<[u8]>, params: &Parameters, seed: Option<u64>) -> String {
     // Decode the Base64 public key string
     let pk_arr: Vec<i64> = decompress(pk_base64);
 
@@ -64,16 +65,16 @@ pub fn encrypt_string(pk_base64: &str, message: &str, params: &Parameters, seed:
     let pk = [pk_b, pk_a];
 
     // Convert each byte into its 8-bit representation (MSB first)
-    let message_bits: Vec<i64> = message
-        .bytes()
-        .flat_map(|byte| (0..8).rev().map(move |i| ((byte >> i) & 1) as i64))
-        .collect();
+    let message_bits = message
+        .as_ref()
+        .iter()
+        .flat_map(|byte| (0..8).rev().map(move |i| ((byte >> i) & 1) as i64));
 
+    let message_chunks = message_bits
+        .chunks(params.n); // Pack bits into polynomials of size `n`
     // Convert bits into a vector of Polynomials
-    let message_blocks: Vec<Polynomial<i64>> = message_bits
-        .chunks(params.n) // Pack bits into polynomials of size `n`
-        .map(|chunk| Polynomial::new(chunk.to_vec()))
-        .collect();
+    let message_blocks = message_chunks.into_iter()
+        .map(|chunk| Polynomial::new(chunk.collect_vec()));
 
     // Encrypt each integer message block
     let mut ciphertext_list: Vec<i64> = Vec::new();

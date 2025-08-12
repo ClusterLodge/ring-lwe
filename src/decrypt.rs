@@ -46,10 +46,10 @@ pub fn decrypt(
 /// let sk_string = keys.get("secret").unwrap();
 /// let pk_string = keys.get("public").unwrap();
 /// let message = String::from("hello");
-/// let ciphertext_string = ring_lwe::encrypt::encrypt_string(pk_string, &message, &params, None);
+/// let ciphertext_string = ring_lwe::encrypt::encrypt_bytes(pk_string, &message, &params, None);
 /// let decrypted_message = ring_lwe::decrypt::decrypt_string(sk_string, &ciphertext_string, &params);
 /// ```
-pub fn decrypt_string(sk_base64: &String, ciphertext_base64: &String, params: &Parameters) -> String {
+pub fn decrypt_string(sk_base64: &str, ciphertext_base64: &str, params: &Parameters) -> String {
     // Decode the base64 secret key string and deserialize into a vector of i64 coefficients
     let sk = Polynomial::new(decompress(sk_base64));
 
