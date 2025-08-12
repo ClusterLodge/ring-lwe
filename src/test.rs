@@ -1,9 +1,11 @@
-#[cfg(test)]  // This makes the following module compile only during tests
+#[cfg(test)] // This makes the following module compile only during tests
 mod tests {
-    use crate::keygen::{keygen, keygen_bytes};
-    use crate::encrypt::{encrypt, encrypt_bytes};
     use crate::decrypt::{decrypt, decrypt_bytes};
-    use crate::utils::{Parameters, polyadd, polymul, polymul_fast, mod_coeffs, nearest_int, gen_uniform_poly};
+    use crate::encrypt::{encrypt, encrypt_bytes};
+    use crate::keygen::{keygen, keygen_bytes};
+    use crate::utils::{
+        gen_uniform_poly, mod_coeffs, nearest_int, polyadd, polymul, polymul_fast, Parameters,
+    };
     use ntt::omega;
     use polynomial_ring::Polynomial;
 
@@ -13,10 +15,10 @@ mod tests {
         let seed = None; //set the random seed
         let message = "hello".as_bytes();
         let params = Parameters::default();
-        let keypair = keygen_bytes(&params,seed);
+        let keypair = keygen_bytes(&params, seed);
         let pk = keypair.public;
         let sk = keypair.secret;
-        let ciphertext_string = encrypt_bytes(&pk, &message, &params,seed);
+        let ciphertext_string = encrypt_bytes(&pk, &message, &params, seed);
         let decrypted_message = decrypt_bytes(&sk, &ciphertext_string, &params);
         assert_eq!(message, decrypted_message, "test failed");
     }
@@ -24,17 +26,16 @@ mod tests {
     // Test homomorphic addition property: ensure sum of encrypted plaintexts decrypts to plaintext sum
     #[test]
     pub fn test_hom_add() {
-
         let seed = None; //set the random seed
-        let params = Parameters::default();  // Adjust this if needed
-		let (t, f) = (params.t, &params.f);
+        let params = Parameters::default(); // Adjust this if needed
+        let (t, f) = (params.t, &params.f);
 
         // Create polynomials from ints
         let m0_poly = Polynomial::new(vec![1, 0, 1]);
         let m1_poly = Polynomial::new(vec![0, 0, 1]);
 
         let plaintext_sum = polyadd(&m0_poly, &m1_poly, t, &f);
-        let (pk, sk) = keygen(&params,seed);
+        let (pk, sk) = keygen(&params, seed);
 
         // Encrypt plaintext messages
         let u = encrypt(&pk, &m0_poly, &params, seed);
@@ -46,25 +47,28 @@ mod tests {
         // Decrypt ciphertext sum u+v
         let decrypted_sum = decrypt(&sk, &ciphertext_sum, &params);
 
-        assert_eq!(decrypted_sum, plaintext_sum, "test failed: {} != {}", decrypted_sum, plaintext_sum);
+        assert_eq!(
+            decrypted_sum, plaintext_sum,
+            "test failed: {} != {}",
+            decrypted_sum, plaintext_sum
+        );
     }
 
     // Test homomorphic multiplication property: product of encrypted plaintexts should decrypt to plaintext product
     #[test]
     pub fn test_hom_prod() {
-
         let seed = None; //set the random seed
         let mut params = Parameters::default();
         let (q, t, f) = (params.q, params.t, &params.f);
-        params.q = q*q;
-        params.omega = omega(params.q, 2*params.n);
+        params.q = q * q;
+        params.omega = omega(params.q, 2 * params.n);
 
         //create polynomials from ints
         let m0_poly = Polynomial::new(vec![1, 0, 1]);
         let m1_poly = Polynomial::new(vec![0, 0, 1]);
 
         // Generate the keypair
-        let (pk, sk) = keygen(&params,seed);
+        let (pk, sk) = keygen(&params, seed);
 
         // Encrypt plaintext messages
         let u = encrypt(&pk, &m0_poly, &params, seed);
@@ -72,34 +76,52 @@ mod tests {
 
         let plaintext_prod = polymul(&m0_poly, &m1_poly, t, &f);
         //compute product of encrypted data, using non-standard multiplication
-        let c0 = polymul(&u[0],&v[0],params.q,&f);
-        let u0v1 = &polymul(&u[0],&v[1],params.q,&f);
-        let u1v0 = &polymul(&u[1],&v[0],params.q,&f);
-        let c1 = polyadd(u0v1,u1v0,params.q,&f);
-        let c2 = polymul(&u[1],&v[1],params.q,&f);
+        let c0 = polymul(&u[0], &v[0], params.q, &f);
+        let u0v1 = &polymul(&u[0], &v[1], params.q, &f);
+        let u1v0 = &polymul(&u[1], &v[0], params.q, &f);
+        let c1 = polyadd(u0v1, u1v0, params.q, &f);
+        let c2 = polymul(&u[1], &v[1], params.q, &f);
         //compute c0 + c1*s + c2*s*s
-        let c1_sk = &polymul(&c1,&sk,params.q,&f);
-        let c2_sk_squared = &polymul(&polymul(&c2,&sk,params.q,&f),&sk,params.q,&f);
-        let ciphertext_prod = polyadd(&polyadd(&c0,c1_sk,params.q,&f),c2_sk_squared,params.q,&f);
+        let c1_sk = &polymul(&c1, &sk, params.q, &f);
+        let c2_sk_squared = &polymul(&polymul(&c2, &sk, params.q, &f), &sk, params.q, &f);
+        let ciphertext_prod = polyadd(
+            &polyadd(&c0, c1_sk, params.q, &f),
+            c2_sk_squared,
+            params.q,
+            &f,
+        );
         //let delta = q / t, divide coeffs by 1 / delta^2
         let delta = q / t;
-        let decrypted_prod = mod_coeffs(Polynomial::new(ciphertext_prod.coeffs().iter().map(|&coeff| nearest_int(coeff,delta * delta) ).collect::<Vec<_>>()),t);
-        
-        assert_eq!(plaintext_prod, decrypted_prod, "test failed: {} != {}", plaintext_prod, decrypted_prod);
+        let decrypted_prod = mod_coeffs(
+            Polynomial::new(
+                ciphertext_prod
+                    .coeffs()
+                    .iter()
+                    .map(|&coeff| nearest_int(coeff, delta * delta))
+                    .collect::<Vec<_>>(),
+            ),
+            t,
+        );
+
+        assert_eq!(
+            plaintext_prod, decrypted_prod,
+            "test failed: {} != {}",
+            plaintext_prod, decrypted_prod
+        );
     }
 
     // Test fast polynomial multiplcation using NTT for small example polynomials
     #[test]
     pub fn test_polymul_fast() {
         let p: i64 = 17; // Prime modulus
-        let n: usize = 8;  // Length of the NTT (must be a power of 2)
+        let n: usize = 8; // Length of the NTT (must be a power of 2)
         let omega = omega(p, n); // n-th root of unity
         let params = Parameters::default();
-    
+
         // Input polynomials (padded to length `n`)
         let a = Polynomial::new(vec![1, 2, 3, 4]);
         let b = Polynomial::new(vec![5, 6, 7, 8]);
-    
+
         let c_std = polymul(&a, &b, p, &params.f);
         let c_fast = polymul_fast(&a, &b, p, &params.f, omega);
 
@@ -111,11 +133,11 @@ mod tests {
     pub fn test_polymul_fast_uniform() {
         let seed = None; //set the random seed
         let params = Parameters::default();
-    
+
         // Input polynomials (padded to length `n`)
         let a = gen_uniform_poly(params.n, params.q, seed);
         let b = gen_uniform_poly(params.n, params.q, seed);
-    
+
         let c_std = polymul(&a, &b, params.q, &params.f);
         let c_fast = polymul_fast(&a, &b, params.q, &params.f, params.omega);
 
@@ -131,12 +153,17 @@ mod tests {
             "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
             "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
             "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-        ).as_bytes();
+        )
+        .as_bytes();
         // params.n is bit length.
-        assert_eq!(8 * message_256.len(), 2 * params.n, "invalid test: data is expected to be 2 blocks long");
-        let keypair = keygen_bytes(&params,seed);
+        assert_eq!(
+            8 * message_256.len(),
+            2 * params.n,
+            "invalid test: data is expected to be 2 blocks long"
+        );
+        let keypair = keygen_bytes(&params, seed);
         let pk = keypair.public;
-        let ciphertext = encrypt_bytes(&pk, &message_256, &params,seed);
+        let ciphertext = encrypt_bytes(&pk, &message_256, &params, seed);
         // two block length; add extra 8 bytes for bincode metadata.
         // So, the cyphertext is 2 * 8 * 8 = 128 times larger than the plaintext.
         assert_eq!(ciphertext.len(), 128 * message_256.len() + 8);

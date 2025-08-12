@@ -10,7 +10,7 @@ use polynomial_ring::Polynomial;
 /// * `ct` - array of ciphertext polynomials
 /// * `params` - ring-LWE parameters
 /// # Returns:
-///	decrypted polynomial
+/// decrypted polynomial
 /// # Example:
 /// ```
 /// let params = ring_lwe::utils::Parameters::default();
@@ -41,7 +41,7 @@ pub fn decrypt(
 /// * `ciphertext` - ciphertext to decrypt as a bincode encoded slice of bytes
 /// * `params` - ring-LWE parameters
 /// # Returns:
-///	decrypted plaintext message
+/// decrypted plaintext message
 /// # Example:
 /// ```
 /// let params = ring_lwe::utils::Parameters::default();
@@ -71,7 +71,7 @@ pub fn decrypt_bytes(sk: &SecKey, ciphertext: &[u8], params: &Parameters) -> Vec
         let ct = [c0, c1];
 
         // Decrypt the ciphertext
-        decrypted_bits.extend(decrypt(&sk, &ct, &params).coeffs());
+        decrypted_bits.extend(decrypt(&sk, &ct, params).coeffs());
     }
 
     // Convert decrypted bits into a string

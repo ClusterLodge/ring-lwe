@@ -50,14 +50,14 @@ pub fn mod_coeffs(x: Polynomial<i64>, modulus: i64) -> Polynomial<i64> {
     let coeffs = x.coeffs();
     let mut newcoeffs = vec![];
     let mut c;
-    if coeffs.len() == 0 {
+    if coeffs.is_empty() {
         // return original input for the zero polynomial
         x
     } else {
-        for i in 0..coeffs.len() {
-            c = coeffs[i].rem_euclid(modulus);
+        for coeff in coeffs {
+            c = coeff.rem_euclid(modulus);
             if c > modulus / 2 {
-                c = c - modulus;
+                c -= modulus;
             }
             newcoeffs.push(c);
         }
@@ -75,11 +75,10 @@ pub fn polyrem(x: Polynomial<i64>, f: &Polynomial<i64>) -> Polynomial<i64> {
     let n = f.coeffs().len() - 1;
     let mut coeffs = x.coeffs().to_vec();
     if coeffs.len() < n + 1 {
-        return Polynomial::new(coeffs);
+        Polynomial::new(coeffs)
     } else {
         for i in n..coeffs.len() {
-            coeffs[i % n] =
-                coeffs[i % n] + (-1 as i64).pow((i / n).try_into().unwrap()) * coeffs[i];
+            coeffs[i % n] += (-1_i64).pow((i / n).try_into().unwrap()) * coeffs[i];
         }
         coeffs.resize(n, 0);
         Polynomial::new(coeffs)
@@ -234,8 +233,8 @@ pub fn gen_binary_poly(size: usize, seed: Option<u64>) -> Polynomial<i64> {
         None => StdRng::from_entropy(),
     };
     let mut coeffs = vec![0i64; size];
-    for i in 0..size {
-        coeffs[i] = between.sample(&mut rng);
+    for ci in &mut coeffs {
+        *ci = between.sample(&mut rng);
     }
     Polynomial::new(coeffs)
 }
@@ -253,8 +252,8 @@ pub fn gen_ternary_poly(size: usize, seed: Option<u64>) -> Polynomial<i64> {
         None => StdRng::from_entropy(),
     };
     let mut coeffs = vec![0i64; size];
-    for i in 0..size {
-        coeffs[i] = between.sample(&mut rng);
+    for ci in &mut coeffs {
+        *ci = between.sample(&mut rng);
     }
     Polynomial::new(coeffs)
 }
@@ -273,8 +272,8 @@ pub fn gen_uniform_poly(size: usize, q: i64, seed: Option<u64>) -> Polynomial<i6
         None => StdRng::from_entropy(),
     };
     let mut coeffs = vec![0i64; size];
-    for i in 0..size {
-        coeffs[i] = between.sample(&mut rng);
+    for ci in &mut coeffs {
+        *ci = between.sample(&mut rng);
     }
     mod_coeffs(Polynomial::new(coeffs), q)
 }
@@ -288,14 +287,14 @@ pub fn gen_uniform_poly(size: usize, q: i64, seed: Option<u64>) -> Polynomial<i6
 /// polynomial with coefficients sampled from a normal distribution
 #[allow(dead_code)]
 pub fn gen_normal_poly(size: usize, sigma: f64, seed: Option<u64>) -> Polynomial<i64> {
-    let normal = Normal::new(0.0 as f64, sigma).unwrap();
+    let normal = Normal::new(0.0_f64, sigma).unwrap();
     let mut rng = match seed {
         Some(seed) => StdRng::seed_from_u64(seed),
         None => StdRng::from_entropy(),
     };
     let mut coeffs = vec![0i64; size];
-    for i in 0..size {
-        coeffs[i] = normal.sample(&mut rng).round() as i64;
+    for ci in &mut coeffs {
+        *ci = normal.sample(&mut rng).round() as i64;
     }
     Polynomial::new(coeffs)
 }
@@ -329,5 +328,5 @@ pub fn compress(data: &Vec<i64>) -> Vec<u8> {
 /// # Returns
 /// * `decoded_data` - vector of i64
 pub fn decompress(bincode_bytes: &[u8]) -> Vec<i64> {
-    bincode::deserialize(&bincode_bytes).expect("Failed to deserialize data")
+    bincode::deserialize(bincode_bytes).expect("Failed to deserialize data")
 }

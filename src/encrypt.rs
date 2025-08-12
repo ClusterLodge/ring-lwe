@@ -12,7 +12,7 @@ use polynomial_ring::Polynomial;
 /// * `params` - ring-LWE parameters
 /// * `seed` - random seed
 /// # Returns:
-///	(ciphertext component 0, ciphertext component 1)
+/// (ciphertext component 0, ciphertext component 1)
 /// # Example:
 /// ```
 /// let params = ring_lwe::utils::Parameters::default();
@@ -54,7 +54,7 @@ pub fn encrypt(
 /// * `params` - ring-LWE parameters
 /// * `seed` - random seed
 /// # Returns:
-///	encrypted message as a bincode encoded vector
+/// encrypted message as a bincode encoded vector
 /// # Example:
 /// ```
 /// let params = ring_lwe::utils::Parameters::default();
@@ -91,7 +91,7 @@ pub fn encrypt_bytes(
     // Encrypt each integer message block
     let mut ciphertext_list: Vec<i64> = Vec::new();
     for message_block in message_blocks {
-        let ciphertext = encrypt(&pk, &message_block, &params, seed);
+        let ciphertext = encrypt(&pk, &message_block, params, seed);
         ciphertext_list.extend(ciphertext[0].coeffs());
         ciphertext_list.extend(ciphertext[1].coeffs());
     }
