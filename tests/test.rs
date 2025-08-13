@@ -1,9 +1,7 @@
-#[cfg(test)] // This makes the following module compile only during tests
-mod tests {
-    use crate::decrypt::{decrypt, decrypt_bytes};
-    use crate::encrypt::{encrypt, encrypt_bytes};
-    use crate::keygen::{keygen, keygen_bytes};
-    use crate::utils::{
+    use ring_lwe::decrypt::{decrypt, decrypt_bytes};
+    use ring_lwe::encrypt::{encrypt, encrypt_bytes};
+    use ring_lwe::keygen::{keygen, keygen_bytes};
+    use ring_lwe::utils::{
         gen_uniform_poly, mod_coeffs, nearest_int, polyadd, polymul, polymul_fast, Parameters,
     };
     use ntt::omega;
@@ -168,4 +166,3 @@ mod tests {
         // So, the cyphertext is 2 * 8 * 8 = 128 times larger than the plaintext.
         assert_eq!(ciphertext.len(), 128 * message_256.len() + 8);
     }
-}
