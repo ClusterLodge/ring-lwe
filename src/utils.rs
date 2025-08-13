@@ -133,13 +133,13 @@ pub fn polymul_fast(
     x: &Polynomial<i64>,
     y: &Polynomial<i64>,
     q: i64,
-    f: &Polynomial<i64>,
-    omega: i64,
+    _f: &Polynomial<i64>,
+    _omega: i64,
 ) -> Polynomial<i64> {
     let n1 = x.coeffs().len();
     let n2 = y.coeffs().len();
-    // Compute the nearest power of 2 at least twice the max of input degrees+1
-    let n = 2 * (std::cmp::max(n1, n2)).next_power_of_two();
+    // Compute the nearest power of the max of input degrees+1
+    let n = std::cmp::max(n1, n2).next_power_of_two();
     // Pad coefficients
     let x_pad = {
         let mut coeffs = x.coeffs().to_vec();
@@ -153,11 +153,11 @@ pub fn polymul_fast(
     };
 
     // Perform the polynomial multiplication
-    let r_coeffs = polymul_ntt(&x_pad, &y_pad, n, q, omega);
+    let r_coeffs = polymul_ntt(&x_pad, &y_pad, n, q, _omega);
 
     // Construct the result polynomial and reduce modulo f
-    let mut r = Polynomial::new(r_coeffs);
-    r = polyrem(r, f);
+    let r = Polynomial::new(r_coeffs);
+    // let r = polyrem(r, f);
     mod_coeffs(r, q)
 }
 
