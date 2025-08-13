@@ -1,5 +1,5 @@
 use crate::utils::{
-    gen_ternary_poly, gen_uniform_poly, polyadd, polyinv, polymul_fast, Parameters,
+    append_block, gen_ternary_poly, gen_uniform_poly, polyadd, polyinv, polymul_fast, Parameters,
 };
 use polynomial_ring::Polynomial;
 
@@ -59,8 +59,8 @@ pub fn keygen_bytes(params: &Parameters, seed: Option<u64>) -> KeyPair {
     let (pk, sk) = keygen(params, seed);
 
     let mut pk_coeffs: Vec<i64> = Vec::with_capacity(2 * params.n);
-    pk_coeffs.extend(pk[0].coeffs());
-    pk_coeffs.extend(pk[1].coeffs());
+    append_block(&mut pk_coeffs, pk[0].coeffs(), params.n);
+    append_block(&mut pk_coeffs, pk[1].coeffs(), params.n);
 
     KeyPair {
         public: PubKey(pk_coeffs),

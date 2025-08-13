@@ -1,6 +1,8 @@
 use crate::{
     keygen::PubKey,
-    utils::{compress, gen_ternary_poly, mod_coeffs, polyadd, polymul_fast, Parameters},
+    utils::{
+        append_block, compress, gen_ternary_poly, mod_coeffs, polyadd, polymul_fast, Parameters,
+    },
 };
 use itertools::Itertools as _;
 use polynomial_ring::Polynomial;
@@ -92,8 +94,8 @@ pub fn encrypt_bytes(
     let mut ciphertext_list: Vec<i64> = Vec::new();
     for message_block in message_blocks {
         let ciphertext = encrypt(&pk, &message_block, params, seed);
-        ciphertext_list.extend(ciphertext[0].coeffs());
-        ciphertext_list.extend(ciphertext[1].coeffs());
+        append_block(&mut ciphertext_list, ciphertext[0].coeffs(), params.n);
+        append_block(&mut ciphertext_list, ciphertext[1].coeffs(), params.n);
     }
 
     // Serialize the ciphertext list to binary and encode as Base64

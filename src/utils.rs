@@ -330,3 +330,15 @@ pub fn compress(data: &Vec<i64>) -> Vec<u8> {
 pub fn decompress(bincode_bytes: &[u8]) -> Vec<i64> {
     bincode::deserialize(bincode_bytes).expect("Failed to deserialize data")
 }
+
+pub(crate) fn append_block<T: Clone + Default>(buff: &mut Vec<T>, data: &[T], n: usize) {
+    assert!(
+        data.len() <= n,
+        "Data length exceeds block size: {}",
+        data.len()
+    );
+    buff.extend_from_slice(data);
+    for _ in data.len()..n {
+        buff.push(T::default());
+    }
+}
