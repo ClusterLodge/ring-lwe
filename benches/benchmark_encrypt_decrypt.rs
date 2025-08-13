@@ -98,22 +98,25 @@ fn bench_decrypt_bytes_long(c: &mut Criterion) {
     let params = Parameters::default();
     let keypair = keygen_bytes(&params, None);
     let pk = keypair.public;
+    let sk = keypair.secret;
     let mut message4k = vec![0u8; 4 * 1024];
     let mut message4m = vec![0u8; 4 * 1024 * 1024];
     let mut rng = rand::thread_rng();
     rng.fill_bytes(&mut message4k);
     rng.fill_bytes(&mut message4m);
 
-    let mut group = c.benchmark_group("encrypt_string_large");
+    let mut group = c.benchmark_group("decrypt_string_large");
     for (id, data) in [
         ("2000", MESSAGE_2000.as_bytes()),
         ("4k", &message4k[..]),
         ("4m", &message4m[..]),
     ] {
-        let ciphertext = encrypt_bytes(&pk, &message, &params, None);
-        group.bench_with_input(BenchmarkId::from_parameter(id), data, |b, data| {
-            b.iter(|| decrypt_bytes(&sk, &ciphhertext, &params, None))
-        });
+        let ciphertext = encrypt_bytes(&pk, &data, &params, None);
+        group.bench_with_input(
+            BenchmarkId::from_parameter(id),
+            &ciphertext,
+            |b, ciphertext| b.iter(|| decrypt_bytes(&sk, ciphertext, &params)),
+        );
     }
 }
 
