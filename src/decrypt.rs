@@ -26,10 +26,9 @@ pub fn decrypt(
 ) -> Polynomial<i64> {
     let (_n, q, t, f, omega) = (params.n, params.q, params.t, &params.f, params.omega);
     let scaled_pt = polyadd(&polymul_fast(&ct[1], sk, q, f, omega), &ct[0], q, f);
-    let mut decrypted_coeffs = vec![];
-    let mut s;
+    let mut decrypted_coeffs = Vec::with_capacity(scaled_pt.coeffs().len());
     for c in scaled_pt.coeffs().iter() {
-        s = nearest_int(c * t, q);
+        let s = nearest_int(c * t, q);
         decrypted_coeffs.push(s.rem_euclid(t));
     }
     Polynomial::new(decrypted_coeffs)

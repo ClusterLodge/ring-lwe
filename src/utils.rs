@@ -1,5 +1,4 @@
 use bincode;
-use ntt::polymul_ntt;
 use polynomial_ring::Polynomial;
 use rand::rngs::StdRng;
 use rand::SeedableRng;
@@ -65,7 +64,7 @@ pub fn mod_coeffs(x: Polynomial<i64>, modulus: i64) -> Polynomial<i64> {
     }
 }
 
-/// Polynomial emainder of x modulo f assuming f=x^n+1
+/// Polynomial remainder of x modulo f assuming f=x^n+1
 /// # Arguments:
 /// * `x` - polynomial in Z[X]
 /// * `f` - polynomial modulus
@@ -160,6 +159,23 @@ pub fn polymul_fast(
     let mut r = Polynomial::new(r_coeffs);
     r = polyrem(r, f);
     mod_coeffs(r, q)
+}
+
+fn polymul_ntt(x: &[i64], y: &[i64], n: usize, q: i64, _omega: i64) -> Vec<i64> {
+    let mut x1 = x.iter().map(|&c| c.rem_euclid(q) as _).collect::<Vec<_>>();
+    let mut y1 = y.iter().map(|&c| c.rem_euclid(q) as _).collect::<Vec<_>>();
+
+    let q = q.try_into().unwrap();
+
+    let ntt = tfhe_ntt::prime64::Plan::try_new(n, q)
+        .unwrap_or_else(|| panic!("incorrect NTT parameters: n={n}, q={q}"));
+
+    ntt.fwd(&mut x1);
+    ntt.fwd(&mut y1);
+    ntt.mul_assign_normalize(&mut x1, &y1);
+    ntt.inv(&mut x1);
+
+    x1.into_iter().map(|c| c as i64).collect::<Vec<_>>()
 }
 
 /// Add two polynomials
@@ -340,5 +356,23 @@ pub(crate) fn append_block<T: Clone + Default>(buff: &mut Vec<T>, data: &[T], n:
     buff.extend_from_slice(data);
     for _ in data.len()..n {
         buff.push(T::default());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_mul() {
+        const N: usize = 1024;
+        let mut p1 = vec![-8];
+        let mut p2 = vec![-8];
+
+        p1.resize(N, 0);
+        p2.resize(N, 0);
+        let r = polymul_ntt(&p1, &p2, N, 12289, 1);
+        let r = Polynomial::new(r);
+        assert_eq!(r.coeffs(), vec![64])
     }
 }
