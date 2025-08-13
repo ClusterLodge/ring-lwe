@@ -1,4 +1,4 @@
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use polynomial_ring::Polynomial;
 use ring_lwe::decrypt::{decrypt, decrypt_bytes};
 use ring_lwe::encrypt::{encrypt, encrypt_bytes};
@@ -46,15 +46,28 @@ fn bench_encrypt_bytes_small(c: &mut Criterion) {
     });
 }
 
-fn bench_encrypt_bytes_2000(c: &mut Criterion) {
+fn bench_encrypt_bytes_long(c: &mut Criterion) {
+    use rand::RngCore;
+
     let params = Parameters::default();
     let keypair = keygen_bytes(&params, None);
     let pk = keypair.public;
-    let message = MESSAGE_2000.as_bytes();
+    let mut message4k = vec![0u8; 4 * 1024];
+    let mut message4m = vec![0u8; 4 * 1024 * 1024];
+    let mut rng = rand::thread_rng();
+    rng.fill_bytes(&mut message4k);
+    rng.fill_bytes(&mut message4m);
 
-    c.bench_function("encrypt_string_2000", |b| {
-        b.iter(|| encrypt_bytes(&pk, &message, &params, None))
-    });
+    let mut group = c.benchmark_group("encrypt_string_large");
+    for (id, data) in [
+        ("2000", MESSAGE_2000.as_bytes()),
+        ("4k", &message4k[..]),
+        ("4m", &message4m[..]),
+    ] {
+        group.bench_with_input(BenchmarkId::from_parameter(id), data, |b, data| {
+            b.iter(|| encrypt_bytes(&pk, data, &params, None))
+        });
+    }
 }
 
 fn bench_decrypt(c: &mut Criterion) {
@@ -66,7 +79,7 @@ fn bench_decrypt(c: &mut Criterion) {
     c.bench_function("decrypt", |b| b.iter(|| decrypt(&sk, &ct, &params)));
 }
 
-fn bench_decrypt_string_small(c: &mut Criterion) {
+fn bench_decrypt_bytes_small(c: &mut Criterion) {
     let params = Parameters::default();
     let keypair = keygen_bytes(&params, None);
     let sk = keypair.secret;
@@ -79,26 +92,38 @@ fn bench_decrypt_string_small(c: &mut Criterion) {
     });
 }
 
-fn bench_decrypt_string_2000(c: &mut Criterion) {
+fn bench_decrypt_bytes_long(c: &mut Criterion) {
+    use rand::RngCore;
+
     let params = Parameters::default();
     let keypair = keygen_bytes(&params, None);
-    let sk = keypair.secret;
     let pk = keypair.public;
-    let message = MESSAGE_2000.as_bytes();
-    let ciphertext_string = encrypt_bytes(&pk, &message, &params, None);
+    let mut message4k = vec![0u8; 4 * 1024];
+    let mut message4m = vec![0u8; 4 * 1024 * 1024];
+    let mut rng = rand::thread_rng();
+    rng.fill_bytes(&mut message4k);
+    rng.fill_bytes(&mut message4m);
 
-    c.bench_function("decrypt_string_2000", |b| {
-        b.iter(|| decrypt_bytes(&sk, &ciphertext_string, &params))
-    });
+    let mut group = c.benchmark_group("encrypt_string_large");
+    for (id, data) in [
+        ("2000", MESSAGE_2000.as_bytes()),
+        ("4k", &message4k[..]),
+        ("4m", &message4m[..]),
+    ] {
+        let ciphertext = encrypt_bytes(&pk, &message, &params, None);
+        group.bench_with_input(BenchmarkId::from_parameter(id), data, |b, data| {
+            b.iter(|| decrypt_bytes(&sk, &ciphhertext, &params, None))
+        });
+    }
 }
 
 criterion_group!(
     benches,
     bench_encrypt,
     bench_encrypt_bytes_small,
-    bench_encrypt_bytes_2000,
+    bench_encrypt_bytes_long,
     bench_decrypt,
-    bench_decrypt_string_small,
-    bench_decrypt_string_2000
+    bench_decrypt_bytes_small,
+    bench_decrypt_bytes_long,
 );
 criterion_main!(benches);
