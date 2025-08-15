@@ -1,8 +1,7 @@
 use crate::{
     keygen::PubKey,
     utils::{
-        append_block, compress, gen_ternary_poly, mod_coeffs, polyadd, polymul_fast, NttPlan,
-        Parameters,
+        append_block, compress, gen_ternary_poly, mod_coeffs, polyadd, polymul_fast, Parameters,
     },
 };
 use itertools::Itertools as _;
@@ -28,9 +27,8 @@ pub fn encrypt(
     m: &Polynomial<i64>,       // Plaintext polynomial
     params: &Parameters,       //parameters (n,q,t,f)
     seed: Option<u64>,         // Seed for random number generator
-    ntt_plan: &NttPlan,        // NTT plan for fast polynomial multiplication
 ) -> [Polynomial<i64>; 2] {
-    let (n, q, t, f) = (params.n, params.q, params.t, &params.f);
+    let (n, q, t, f, ntt_plan) = (params.n, params.q, params.t, &params.f, &params.ntt_plan);
     // Scale the plaintext polynomial. use floor(m*q/t) rather than floor (q/t)*m
     let scaled_m = mod_coeffs(m * q / t, q);
 
@@ -73,9 +71,6 @@ pub fn encrypt_bytes(
     params: &Parameters,
     seed: Option<u64>,
 ) -> Vec<u8> {
-    let ntt_plan = NttPlan::try_new(params.n, params.q.try_into().unwrap())
-        .expect("Failed to create NTT plan for encryption");
-
     // Decode the Base64 public key string
     let pk_arr = &pk.0;
 
@@ -98,7 +93,7 @@ pub fn encrypt_bytes(
     // Encrypt each integer message block
     let mut ciphertext_list: Vec<i64> = Vec::new();
     for message_block in message_blocks {
-        let ciphertext = encrypt(&pk, &message_block, params, seed, &ntt_plan);
+        let ciphertext = encrypt(&pk, &message_block, params, seed);
         append_block(&mut ciphertext_list, ciphertext[0].coeffs(), params.n);
         append_block(&mut ciphertext_list, ciphertext[1].coeffs(), params.n);
     }

@@ -4,7 +4,6 @@
     use ring_lwe::utils::{
         gen_uniform_poly, mod_coeffs, nearest_int, polyadd, polymul, polymul_fast, NttPlan, Parameters
     };
-    use ntt::omega;
     use polynomial_ring::Polynomial;
 
     // Test for basic keygen/encrypt/decrypt of a message
@@ -27,25 +26,23 @@
         let seed = None; //set the random seed
         let params = Parameters::default(); // Adjust this if needed
         let (t, f) = (params.t, &params.f);
-        let ntt_plan = NttPlan::try_new(params.n, params.q.try_into().unwrap())
-            .expect("Failed to create NTT plan");
 
         // Create polynomials from ints
         let m0_poly = Polynomial::new(vec![1, 0, 1]);
         let m1_poly = Polynomial::new(vec![0, 0, 1]);
 
         let plaintext_sum = polyadd(&m0_poly, &m1_poly, t, &f);
-        let (pk, sk) = keygen(&params, seed, &ntt_plan);
+        let (pk, sk) = keygen(&params, seed);
 
         // Encrypt plaintext messages
-        let u = encrypt(&pk, &m0_poly, &params, seed, &ntt_plan);
-        let v = encrypt(&pk, &m1_poly, &params, seed, &ntt_plan);
+        let u = encrypt(&pk, &m0_poly, &params, seed);
+        let v = encrypt(&pk, &m1_poly, &params, seed);
 
         // Compute sum of encrypted data
         let ciphertext_sum = [&u[0] + &v[0], &u[1] + &v[1]];
 
         // Decrypt ciphertext sum u+v
-        let decrypted_sum = decrypt(&sk, &ciphertext_sum, &params, &ntt_plan);
+        let decrypted_sum = decrypt(&sk, &ciphertext_sum, &params);
 
         assert_eq!(
             decrypted_sum, plaintext_sum,
@@ -62,20 +59,17 @@
         let mut params = Parameters::default();
         let (q, t, f) = (params.q, params.t, &params.f);
         params.q = q * q;
-        params.omega = omega(params.q, 2 * params.n);
-        let ntt_plan = NttPlan::try_new(params.n, params.q.try_into().unwrap())
-            .expect("Failed to create NTT plan");
 
         //create polynomials from ints
         let m0_poly = Polynomial::new(vec![1, 0, 1]);
         let m1_poly = Polynomial::new(vec![0, 0, 1]);
 
         // Generate the keypair
-        let (pk, sk) = keygen(&params, seed, &ntt_plan);
+        let (pk, sk) = keygen(&params, seed);
 
         // Encrypt plaintext messages
-        let u = encrypt(&pk, &m0_poly, &params, seed, &ntt_plan);
-        let v = encrypt(&pk, &m1_poly, &params, seed, &ntt_plan);
+        let u = encrypt(&pk, &m0_poly, &params, seed);
+        let v = encrypt(&pk, &m1_poly, &params, seed);
 
         let plaintext_prod = polymul(&m0_poly, &m1_poly, t, &f);
         //compute product of encrypted data, using non-standard multiplication
@@ -118,15 +112,13 @@
     pub fn test_polymul_fast_uniform() {
         let seed = None; //set the random seed
         let params = Parameters::default();
-        let ntt_plan = NttPlan::try_new(params.n, params.q.try_into().unwrap())
-            .expect("Failed to create NTT plan");
 
         // Input polynomials (padded to length `n`)
         let a = gen_uniform_poly(params.n, params.q, seed);
         let b = gen_uniform_poly(params.n, params.q, seed);
 
         let c_std = polymul(&a, &b, params.q, &params.f);
-        let c_fast = polymul_fast(&a, &b, params.q, &ntt_plan);
+        let c_fast = polymul_fast(&a, &b, params.q, &params.ntt_plan);
 
         assert_eq!(c_std, c_fast, "test failed: {} != {}", c_std, c_fast);
     }

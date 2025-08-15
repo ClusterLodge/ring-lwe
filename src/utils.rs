@@ -4,15 +4,15 @@ use rand::rngs::StdRng;
 use rand::SeedableRng;
 use rand_distr::{Distribution, Normal, Uniform};
 
-pub type NttPlan = tfhe_ntt::prime32::Plan;
+pub type NttPlan = tfhe_ntt::prime64::Plan;
 
 /// Ring-LWE parameters
 #[derive(Debug)]
 pub struct Parameters {
-    pub n: usize,           // Polynomial modulus degree
-    pub q: i64,             // Ciphertext modulus
-    pub t: i64,             // Plaintext modulus
-    pub omega: i64,         // n-th root of unity mod q
+    pub n: usize, // Polynomial modulus degree
+    pub q: i64,   // Ciphertext modulus
+    pub t: i64,   // Plaintext modulus
+    pub ntt_plan: NttPlan,
     pub f: Polynomial<i64>, // Polynomial modulus (x^n + 1 representation)
     #[allow(dead_code)]
     pub sigma: f64, // Standard deviation for normal distribution
@@ -22,9 +22,9 @@ pub struct Parameters {
 impl Default for Parameters {
     fn default() -> Self {
         let n = 1024;
-        let q = 12289;
+        let q = 12289i64;
         let t = 2;
-        let omega = ntt::omega(q, 2 * n);
+        let ntt_plan = NttPlan::try_new(n, q as u64).expect("Failed to create NTT plan");
         let mut poly_vec = vec![0i64; n + 1];
         poly_vec[0] = 1;
         poly_vec[n] = 1;
@@ -34,7 +34,7 @@ impl Default for Parameters {
             n,
             q,
             t,
-            omega,
+            ntt_plan,
             f,
             sigma,
         }
@@ -162,12 +162,7 @@ pub fn polymul_fast(
     mod_coeffs(r, q)
 }
 
-fn polymul_ntt(
-    x: &[i64],
-    y: &[i64],
-    q: i64,
-    ntt_plan: &NttPlan,
-) -> Vec<i64> {
+fn polymul_ntt(x: &[i64], y: &[i64], q: i64, ntt_plan: &NttPlan) -> Vec<i64> {
     let mut x1 = x.iter().map(|&c| c.rem_euclid(q) as _).collect::<Vec<_>>();
     let mut y1 = y.iter().map(|&c| c.rem_euclid(q) as _).collect::<Vec<_>>();
 

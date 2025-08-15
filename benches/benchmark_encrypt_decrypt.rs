@@ -3,15 +3,14 @@ use polynomial_ring::Polynomial;
 use ring_lwe::decrypt::{decrypt, decrypt_bytes};
 use ring_lwe::encrypt::{encrypt, encrypt_bytes};
 use ring_lwe::keygen::{keygen, keygen_bytes};
-use ring_lwe::utils::{Parameters, NttPlan};
+use ring_lwe::utils::Parameters;
 
 fn bench_encrypt(c: &mut Criterion) {
     let params = Parameters::default();
-    let ntt_plan = NttPlan::try_new(params.n, params.q as _).unwrap();
-    let (pk, _) = keygen(&params, None, &ntt_plan);
+    let (pk, _) = keygen(&params, None);
     let m_b = Polynomial::new(vec![0, 1, 0, 1, 1, 0, 1, 0]); // Example binary message
 
-    c.bench_function("encrypt", |b| b.iter(|| encrypt(&pk, &m_b, &params, None, &ntt_plan)));
+    c.bench_function("encrypt", |b| b.iter(|| encrypt(&pk, &m_b, &params, None)));
 }
 
 const MESSAGE_SMALL: &str = "small";
@@ -73,13 +72,12 @@ fn bench_encrypt_bytes_long(c: &mut Criterion) {
 
 fn bench_decrypt(c: &mut Criterion) {
     let params = Parameters::default();
-    let ntt_plan = NttPlan::try_new(params.n, params.q as _).unwrap();
 
-    let (pk, sk) = keygen(&params, None, &ntt_plan);
+    let (pk, sk) = keygen(&params, None);
     let m_b = Polynomial::new(vec![0, 1, 0, 1, 1, 0, 1, 0]); // Example binary message
-    let ct = encrypt(&pk, &m_b, &params, None, &ntt_plan);
+    let ct = encrypt(&pk, &m_b, &params, None);
 
-    c.bench_function("decrypt", |b| b.iter(|| decrypt(&sk, &ct, &params, &ntt_plan)));
+    c.bench_function("decrypt", |b| b.iter(|| decrypt(&sk, &ct, &params)));
 }
 
 fn bench_decrypt_bytes_small(c: &mut Criterion) {
