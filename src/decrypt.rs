@@ -1,6 +1,6 @@
 use crate::{
     keygen::SecKey,
-    utils::{decompress, nearest_int, polyadd, polymul_fast, Parameters},
+    utils::{decompress, nearest_int, polyadd, polymul_fast, NttPlan, Parameters},
 };
 use polynomial_ring::Polynomial;
 
@@ -23,9 +23,10 @@ pub fn decrypt(
     sk: &Polynomial<i64>,      // Secret key
     ct: &[Polynomial<i64>; 2], // Array of ciphertext polynomials
     params: &Parameters,
+    ntt_plan: &NttPlan,
 ) -> Polynomial<i64> {
-    let (_n, q, t, f, omega) = (params.n, params.q, params.t, &params.f, params.omega);
-    let scaled_pt = polyadd(&polymul_fast(&ct[1], sk, q, f, omega), &ct[0], q, f);
+    let (_n, q, t, f) = (params.n, params.q, params.t, &params.f);
+    let scaled_pt = polyadd(&polymul_fast(&ct[1], sk, q, ntt_plan), &ct[0], q, f);
     let mut decrypted_coeffs = Vec::with_capacity(scaled_pt.coeffs().len());
     for c in scaled_pt.coeffs().iter() {
         let s = nearest_int(c * t, q);
@@ -52,6 +53,9 @@ pub fn decrypt(
 /// let decrypted_message = ring_lwe::decrypt::decrypt_bytes(&sk, &ciphertext, &params);
 /// ```
 pub fn decrypt_bytes(sk: &SecKey, ciphertext: &[u8], params: &Parameters) -> Vec<u8> {
+    let ntt_plan = NttPlan::try_new(params.n, params.q.try_into().unwrap())
+        .expect("Failed to create NTT plan for encryption");
+
     // Decode the base64 secret key string and deserialize into a vector of i64 coefficients
     let sk = Polynomial::new(sk.0.clone());
 
@@ -70,7 +74,7 @@ pub fn decrypt_bytes(sk: &SecKey, ciphertext: &[u8], params: &Parameters) -> Vec
         let ct = [c0, c1];
 
         // Decrypt the ciphertext
-        decrypted_bits.extend(decrypt(&sk, &ct, params).coeffs());
+        decrypted_bits.extend(decrypt(&sk, &ct, params, &ntt_plan).coeffs());
     }
 
     // Convert decrypted bits into a string

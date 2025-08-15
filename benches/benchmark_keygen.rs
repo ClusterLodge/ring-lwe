@@ -1,10 +1,11 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use ring_lwe::keygen::{keygen, keygen_bytes};
-use ring_lwe::utils::Parameters;
+use ring_lwe::utils::{NttPlan, Parameters};
 
 fn bench_keygen(c: &mut Criterion) {
     let params = Parameters::default();
-    c.bench_function("keygen", |b| b.iter(|| keygen(&params, None)));
+    let ntt_plan = NttPlan::try_new(params.n, params.q as _).unwrap();
+    c.bench_function("keygen", |b| b.iter(|| keygen(&params, None, &ntt_plan)));
 }
 
 fn bench_keygen_bytes(c: &mut Criterion) {

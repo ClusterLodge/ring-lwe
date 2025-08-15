@@ -39,3 +39,6 @@ harness = false
 name = "benchmark_encrypt_decrypt"
 path = "benches/benchmark_encrypt_decrypt.rs"
 harness = false
+
+[profile.bench]
+debug = true

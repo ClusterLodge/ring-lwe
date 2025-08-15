@@ -4,6 +4,8 @@ use rand::rngs::StdRng;
 use rand::SeedableRng;
 use rand_distr::{Distribution, Normal, Uniform};
 
+pub type NttPlan = tfhe_ntt::prime32::Plan;
+
 /// Ring-LWE parameters
 #[derive(Debug)]
 pub struct Parameters {
@@ -126,15 +128,14 @@ pub fn polymul(
 /// let a = polynomial_ring::Polynomial::new(vec![1, 2, 3, 4]);
 /// let b = polynomial_ring::Polynomial::new(vec![5, 6, 7, 8]);
 /// let c_std = ring_lwe::utils::polymul(&a, &b, p, &params.f);
-/// let c_fast = ring_lwe::utils::polymul_fast(&a, &b, p, &params.f, omega);
+/// let c_fast = ring_lwe::utils::polymul_fast(&a, &b, p, &ntt_plan);
 /// assert_eq!(c_std, c_fast, "test failed: {} != {}", c_std, c_fast);
 /// ```
 pub fn polymul_fast(
     x: &Polynomial<i64>,
     y: &Polynomial<i64>,
     q: i64,
-    _f: &Polynomial<i64>,
-    _omega: i64,
+    ntt_plan: &NttPlan,
 ) -> Polynomial<i64> {
     let n1 = x.coeffs().len();
     let n2 = y.coeffs().len();
@@ -153,7 +154,7 @@ pub fn polymul_fast(
     };
 
     // Perform the polynomial multiplication
-    let r_coeffs = polymul_ntt(&x_pad, &y_pad, n, q, _omega);
+    let r_coeffs = polymul_ntt(&x_pad, &y_pad, q, ntt_plan);
 
     // Construct the result polynomial and reduce modulo f
     let r = Polynomial::new(r_coeffs);
@@ -161,19 +162,19 @@ pub fn polymul_fast(
     mod_coeffs(r, q)
 }
 
-fn polymul_ntt(x: &[i64], y: &[i64], n: usize, q: i64, _omega: i64) -> Vec<i64> {
+fn polymul_ntt(
+    x: &[i64],
+    y: &[i64],
+    q: i64,
+    ntt_plan: &NttPlan,
+) -> Vec<i64> {
     let mut x1 = x.iter().map(|&c| c.rem_euclid(q) as _).collect::<Vec<_>>();
     let mut y1 = y.iter().map(|&c| c.rem_euclid(q) as _).collect::<Vec<_>>();
 
-    let q = q.try_into().unwrap();
-
-    let ntt = tfhe_ntt::prime64::Plan::try_new(n, q)
-        .unwrap_or_else(|| panic!("incorrect NTT parameters: n={n}, q={q}"));
-
-    ntt.fwd(&mut x1);
-    ntt.fwd(&mut y1);
-    ntt.mul_assign_normalize(&mut x1, &y1);
-    ntt.inv(&mut x1);
+    ntt_plan.fwd(&mut x1);
+    ntt_plan.fwd(&mut y1);
+    ntt_plan.mul_assign_normalize(&mut x1, &y1);
+    ntt_plan.inv(&mut x1);
 
     x1.into_iter().map(|c| c as i64).collect::<Vec<_>>()
 }
@@ -365,13 +366,14 @@ mod tests {
 
     #[test]
     fn test_mul() {
+        let ntt_plan = NttPlan::try_new(1024, 12289).expect("Failed to create NTT plan");
         const N: usize = 1024;
         let mut p1 = vec![-8];
         let mut p2 = vec![-8];
 
         p1.resize(N, 0);
         p2.resize(N, 0);
-        let r = polymul_ntt(&p1, &p2, N, 12289, 1);
+        let r = polymul_ntt(&p1, &p2, 12289, &ntt_plan);
         let r = Polynomial::new(r);
         assert_eq!(r.coeffs(), vec![64])
     }

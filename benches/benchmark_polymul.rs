@@ -1,12 +1,11 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use ntt::omega;
-use polynomial_ring::Polynomial;
-use ring_lwe::utils::{gen_uniform_poly, polymul, polymul_fast, Parameters};
+use ring_lwe::utils::{gen_uniform_poly, polymul, polymul_fast, Parameters, NttPlan};
 
 fn benchmark_polymul_uniform(c: &mut Criterion) {
     let seed = None; // Set the random seed
     let params = Parameters::default();
-    let (n, q, omega) = (params.n, params.q, params.omega);
+    let (n, q) = (params.n, params.q);
+    let ntt_plan = NttPlan::try_new(n, q as _).unwrap();
 
     // Input polynomials (padded to length `n`)
     let poly_0 = gen_uniform_poly(n, q, seed);
@@ -19,7 +18,7 @@ fn benchmark_polymul_uniform(c: &mut Criterion) {
 
     // Time fast multiplication
     c.bench_function("Fast polymul (large)", |b| {
-        b.iter(|| polymul_fast(&poly_0, &poly_1, q, &params.f, omega))
+        b.iter(|| polymul_fast(&poly_0, &poly_1, q, &ntt_plan))
     });
 }
 
