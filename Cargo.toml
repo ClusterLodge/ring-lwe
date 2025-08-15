@@ -9,10 +9,10 @@ homepage = "https://github.com/lattice-based-cryptography/ring-lwe"
 repository = "https://github.com/lattice-based-cryptography/ring-lwe"
 
 [dependencies]
-polynomial-ring = "0.5.0"
+polynomial-ring = "0.5.1"
 num-traits = "=0.2.19"
-rand = "0.8.5"
-rand_distr = "0.4.3"
+rand = "0.9.2"
+rand_distr = "0.5.1"
 ntt = "0.1.9"
 base64 = "0.21"
 bincode = "1.3"

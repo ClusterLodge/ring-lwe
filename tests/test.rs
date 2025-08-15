@@ -2,20 +2,19 @@
     use ring_lwe::encrypt::{encrypt, encrypt_bytes};
     use ring_lwe::keygen::{keygen, keygen_bytes};
     use ring_lwe::utils::{
-        gen_uniform_poly, mod_coeffs, nearest_int, polyadd, polymul, polymul_fast, NttPlan, Parameters
+        gen_uniform_poly, mod_coeffs, nearest_int, polyadd, polymul, polymul_fast, Parameters
     };
     use polynomial_ring::Polynomial;
 
     // Test for basic keygen/encrypt/decrypt of a message
     #[test]
     pub fn test_basic() {
-        let seed = None; //set the random seed
         let message = "hello".as_bytes();
         let params = Parameters::default();
-        let keypair = keygen_bytes(&params, seed);
+        let keypair = keygen_bytes(&params);
         let pk = keypair.public;
         let sk = keypair.secret;
-        let ciphertext_string = encrypt_bytes(&pk, &message, &params, seed);
+        let ciphertext_string = encrypt_bytes(&pk, &message, &params);
         let decrypted_message = decrypt_bytes(&sk, &ciphertext_string, &params);
         assert_eq!(message, decrypted_message, "test failed");
     }
@@ -23,7 +22,7 @@
     // Test homomorphic addition property: ensure sum of encrypted plaintexts decrypts to plaintext sum
     #[test]
     pub fn test_hom_add() {
-        let seed = None; //set the random seed
+        let mut rng = rand::rng();
         let params = Parameters::default(); // Adjust this if needed
         let (t, f) = (params.t, &params.f);
 
@@ -32,11 +31,11 @@
         let m1_poly = Polynomial::new(vec![0, 0, 1]);
 
         let plaintext_sum = polyadd(&m0_poly, &m1_poly, t, &f);
-        let (pk, sk) = keygen(&params, seed);
+        let (pk, sk) = keygen(&params, &mut rng);
 
         // Encrypt plaintext messages
-        let u = encrypt(&pk, &m0_poly, &params, seed);
-        let v = encrypt(&pk, &m1_poly, &params, seed);
+        let u = encrypt(&pk, &m0_poly, &params, &mut rng);
+        let v = encrypt(&pk, &m1_poly, &params, &mut rng);
 
         // Compute sum of encrypted data
         let ciphertext_sum = [&u[0] + &v[0], &u[1] + &v[1]];
@@ -55,7 +54,7 @@
     #[ignore]
     #[test]
     pub fn test_hom_prod() {
-        let seed = None; //set the random seed
+        let mut rng = rand::rng();
         let mut params = Parameters::default();
         let (q, t, f) = (params.q, params.t, &params.f);
         params.q = q * q;
@@ -65,11 +64,11 @@
         let m1_poly = Polynomial::new(vec![0, 0, 1]);
 
         // Generate the keypair
-        let (pk, sk) = keygen(&params, seed);
+        let (pk, sk) = keygen(&params, &mut rng);
 
         // Encrypt plaintext messages
-        let u = encrypt(&pk, &m0_poly, &params, seed);
-        let v = encrypt(&pk, &m1_poly, &params, seed);
+        let u = encrypt(&pk, &m0_poly, &params, &mut rng);
+        let v = encrypt(&pk, &m1_poly, &params, &mut rng);
 
         let plaintext_prod = polymul(&m0_poly, &m1_poly, t, &f);
         //compute product of encrypted data, using non-standard multiplication
@@ -110,12 +109,12 @@
     // Test fast polynomial multiplication with the NTT for uniformly random polynomials degree n
     #[test]
     pub fn test_polymul_fast_uniform() {
-        let seed = None; //set the random seed
+        let mut rng = rand::rng();
         let params = Parameters::default();
 
         // Input polynomials (padded to length `n`)
-        let a = gen_uniform_poly(params.n, params.q, seed);
-        let b = gen_uniform_poly(params.n, params.q, seed);
+        let a = gen_uniform_poly(params.n, params.q, &mut rng);
+        let b = gen_uniform_poly(params.n, params.q, &mut rng);
 
         let c_std = polymul(&a, &b, params.q, &params.f);
         let c_fast = polymul_fast(&a, &b, params.q, &params.ntt_plan);
@@ -125,7 +124,6 @@
 
     #[test]
     fn test_ct_len() {
-        let seed = None; //set the random seed
         let params = Parameters::default();
         let message_256 = concat!(
             "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
@@ -140,9 +138,9 @@
             2 * params.n,
             "invalid test: data is expected to be 2 blocks long"
         );
-        let keypair = keygen_bytes(&params, seed);
+        let keypair = keygen_bytes(&params);
         let pk = keypair.public;
-        let ciphertext = encrypt_bytes(&pk, &message_256, &params, seed);
+        let ciphertext = encrypt_bytes(&pk, &message_256, &params);
         // two block length; add extra 8 bytes for bincode metadata.
         // So, the cyphertext is 2 * 8 * 8 = 128 times larger than the plaintext.
         assert_eq!(ciphertext.len(), 128 * message_256.len() + 8);

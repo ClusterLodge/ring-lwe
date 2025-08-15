@@ -6,6 +6,7 @@ use crate::{
 };
 use itertools::Itertools as _;
 use polynomial_ring::Polynomial;
+use rand::{rngs::StdRng, SeedableRng};
 
 /// Encrypt a polynomial using the public key
 /// # Arguments:
@@ -22,20 +23,20 @@ use polynomial_ring::Polynomial;
 /// let m = polynomial_ring::Polynomial::new(vec![1, 0, 1]);
 /// let ct = ring_lwe::encrypt::encrypt(&pk, &m, &params, None);
 /// ```
-pub fn encrypt(
+pub fn encrypt<Rng: rand::Rng>(
     pk: &[Polynomial<i64>; 2], // Public key (b, a)
     m: &Polynomial<i64>,       // Plaintext polynomial
     params: &Parameters,       //parameters (n,q,t,f)
-    seed: Option<u64>,         // Seed for random number generator
+    rng: &mut Rng,
 ) -> [Polynomial<i64>; 2] {
     let (n, q, t, f, ntt_plan) = (params.n, params.q, params.t, &params.f, &params.ntt_plan);
     // Scale the plaintext polynomial. use floor(m*q/t) rather than floor (q/t)*m
     let scaled_m = mod_coeffs(m * q / t, q);
 
     // Generate random polynomials
-    let e1 = gen_ternary_poly(n, seed);
-    let e2 = gen_ternary_poly(n, seed);
-    let u = gen_ternary_poly(n, seed);
+    let e1 = gen_ternary_poly(n, rng);
+    let e2 = gen_ternary_poly(n, rng);
+    let u = gen_ternary_poly(n, rng);
 
     // Compute ciphertext components
     let ct0 = polyadd(
@@ -65,12 +66,8 @@ pub fn encrypt(
 /// let message = "hello".as_bytes();
 /// let ciphertext = ring_lwe::encrypt::encrypt_bytes(&pk, &message, &params, None);
 /// ```
-pub fn encrypt_bytes(
-    pk: &PubKey,
-    message: &[u8],
-    params: &Parameters,
-    seed: Option<u64>,
-) -> Vec<u8> {
+pub fn encrypt_bytes(pk: &PubKey, message: &[u8], params: &Parameters) -> Vec<u8> {
+    let mut rng = StdRng::from_os_rng();
     // Decode the Base64 public key string
     let pk_arr = &pk.0;
 
@@ -93,7 +90,7 @@ pub fn encrypt_bytes(
     // Encrypt each integer message block
     let mut ciphertext_list: Vec<i64> = Vec::new();
     for message_block in message_blocks {
-        let ciphertext = encrypt(&pk, &message_block, params, seed);
+        let ciphertext = encrypt(&pk, &message_block, params, &mut rng);
         append_block(&mut ciphertext_list, ciphertext[0].coeffs(), params.n);
         append_block(&mut ciphertext_list, ciphertext[1].coeffs(), params.n);
     }

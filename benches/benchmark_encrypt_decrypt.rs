@@ -4,13 +4,15 @@ use ring_lwe::decrypt::{decrypt, decrypt_bytes};
 use ring_lwe::encrypt::{encrypt, encrypt_bytes};
 use ring_lwe::keygen::{keygen, keygen_bytes};
 use ring_lwe::utils::Parameters;
+use rand::SeedableRng as _;
 
 fn bench_encrypt(c: &mut Criterion) {
     let params = Parameters::default();
-    let (pk, _) = keygen(&params, None);
+    let mut rng = rand::rngs::StdRng::from_os_rng();
+    let (pk, _) = keygen(&params, &mut rng);
     let m_b = Polynomial::new(vec![0, 1, 0, 1, 1, 0, 1, 0]); // Example binary message
 
-    c.bench_function("encrypt", |b| b.iter(|| encrypt(&pk, &m_b, &params, None)));
+    c.bench_function("encrypt", |b| b.iter(|| encrypt(&pk, &m_b, &params, &mut rng)));
 }
 
 const MESSAGE_SMALL: &str = "small";
@@ -37,12 +39,12 @@ const MESSAGE_2000: &str = concat!(
 
 fn bench_encrypt_bytes_small(c: &mut Criterion) {
     let params = Parameters::default();
-    let keypair = keygen_bytes(&params, None);
+    let keypair = keygen_bytes(&params);
     let pk = keypair.public;
     let message = MESSAGE_SMALL.as_bytes();
 
     c.bench_function("encrypt_string_small", |b| {
-        b.iter(|| encrypt_bytes(&pk, &message, &params, None))
+        b.iter(|| encrypt_bytes(&pk, &message, &params))
     });
 }
 
@@ -50,11 +52,11 @@ fn bench_encrypt_bytes_long(c: &mut Criterion) {
     use rand::RngCore;
 
     let params = Parameters::default();
-    let keypair = keygen_bytes(&params, None);
+    let keypair = keygen_bytes(&params);
     let pk = keypair.public;
     let mut message4k = vec![0u8; 4 * 1024];
     let mut message4m = vec![0u8; 4 * 1024 * 1024];
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     rng.fill_bytes(&mut message4k);
     rng.fill_bytes(&mut message4m);
 
@@ -65,28 +67,29 @@ fn bench_encrypt_bytes_long(c: &mut Criterion) {
         ("4m", &message4m[..]),
     ] {
         group.bench_with_input(BenchmarkId::from_parameter(id), data, |b, data| {
-            b.iter(|| encrypt_bytes(&pk, data, &params, None))
+            b.iter(|| encrypt_bytes(&pk, data, &params))
         });
     }
 }
 
 fn bench_decrypt(c: &mut Criterion) {
     let params = Parameters::default();
+    let mut rng = rand::rngs::StdRng::from_os_rng();
 
-    let (pk, sk) = keygen(&params, None);
+    let (pk, sk) = keygen(&params, &mut rng);
     let m_b = Polynomial::new(vec![0, 1, 0, 1, 1, 0, 1, 0]); // Example binary message
-    let ct = encrypt(&pk, &m_b, &params, None);
+    let ct = encrypt(&pk, &m_b, &params, &mut rng);
 
     c.bench_function("decrypt", |b| b.iter(|| decrypt(&sk, &ct, &params)));
 }
 
 fn bench_decrypt_bytes_small(c: &mut Criterion) {
     let params = Parameters::default();
-    let keypair = keygen_bytes(&params, None);
+    let keypair = keygen_bytes(&params);
     let sk = keypair.secret;
     let pk = keypair.public;
     let message = MESSAGE_SMALL.as_bytes();
-    let ciphertext_string = encrypt_bytes(&pk, &message, &params, None);
+    let ciphertext_string = encrypt_bytes(&pk, &message, &params);
 
     c.bench_function("decrypt_string_small", |b| {
         b.iter(|| decrypt_bytes(&sk, &ciphertext_string, &params))
@@ -97,12 +100,12 @@ fn bench_decrypt_bytes_long(c: &mut Criterion) {
     use rand::RngCore;
 
     let params = Parameters::default();
-    let keypair = keygen_bytes(&params, None);
+    let keypair = keygen_bytes(&params);
     let pk = keypair.public;
     let sk = keypair.secret;
     let mut message4k = vec![0u8; 4 * 1024];
     let mut message4m = vec![0u8; 4 * 1024 * 1024];
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     rng.fill_bytes(&mut message4k);
     rng.fill_bytes(&mut message4m);
 
@@ -112,7 +115,7 @@ fn bench_decrypt_bytes_long(c: &mut Criterion) {
         ("4k", &message4k[..]),
         ("4m", &message4m[..]),
     ] {
-        let ciphertext = encrypt_bytes(&pk, &data, &params, None);
+        let ciphertext = encrypt_bytes(&pk, &data, &params);
         group.bench_with_input(
             BenchmarkId::from_parameter(id),
             &ciphertext,

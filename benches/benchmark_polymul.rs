@@ -1,14 +1,15 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use ring_lwe::utils::{gen_uniform_poly, polymul, polymul_fast, Parameters};
+use rand::SeedableRng as _;
 
 fn benchmark_polymul_uniform(c: &mut Criterion) {
-    let seed = None; // Set the random seed
+    let mut rng = rand::rngs::StdRng::from_os_rng();
     let params = Parameters::default();
     let (n, q) = (params.n, params.q);
 
     // Input polynomials (padded to length `n`)
-    let poly_0 = gen_uniform_poly(n, q, seed);
-    let poly_1 = gen_uniform_poly(n, q, seed);
+    let poly_0 = gen_uniform_poly(n, q, &mut rng);
+    let poly_1 = gen_uniform_poly(n, q, &mut rng);
 
     // Time standard multiplication
     c.bench_function("Standard polymul (large)", |b| {

@@ -2,6 +2,7 @@ use crate::utils::{
     append_block, gen_ternary_poly, gen_uniform_poly, polyadd, polyinv, polymul_fast, Parameters,
 };
 use polynomial_ring::Polynomial;
+use rand::{rngs::StdRng, SeedableRng};
 
 /// Generate a public and secret key pair
 /// # Arguments:
@@ -14,14 +15,14 @@ use polynomial_ring::Polynomial;
 /// let params = ring_lwe::utils::Parameters::default();
 /// let (pk, sk) = ring_lwe::keygen::keygen(&params, None);
 /// ```
-pub fn keygen(params: &Parameters, seed: Option<u64>) -> ([Polynomial<i64>; 2], Polynomial<i64>) {
+pub fn keygen<Rng: rand::Rng>(params: &Parameters, rng: &mut Rng) -> ([Polynomial<i64>; 2], Polynomial<i64>) {
     //rename parameters
     let (n, q, f) = (params.n, params.q, &params.f);
 
     // Generate a public and secret key
-    let sk = gen_ternary_poly(n, seed);
-    let a = gen_uniform_poly(n, q, seed);
-    let e = gen_ternary_poly(n, seed);
+    let sk = gen_ternary_poly(n, rng);
+    let a = gen_uniform_poly(n, q, rng);
+    let e = gen_ternary_poly(n, rng);
     let b = polyadd(
         &polymul_fast(&polyinv(&a, q), &sk, q, &params.ntt_plan),
         &polyinv(&e, q),
@@ -55,8 +56,9 @@ pub struct KeyPair {
 /// let pk_string = keys.public;
 /// let sk_string = keys.secret;
 /// ```
-pub fn keygen_bytes(params: &Parameters, seed: Option<u64>) -> KeyPair {
-    let (pk, sk) = keygen(params, seed);
+pub fn keygen_bytes(params: &Parameters) -> KeyPair {
+    let mut rng = StdRng::from_os_rng();
+    let (pk, sk) = keygen(params, &mut rng);
 
     let mut pk_coeffs: Vec<i64> = Vec::with_capacity(2 * params.n);
     append_block(&mut pk_coeffs, pk[0].coeffs(), params.n);

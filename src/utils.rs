@@ -1,7 +1,5 @@
 use bincode;
 use polynomial_ring::Polynomial;
-use rand::rngs::StdRng;
-use rand::SeedableRng;
 use rand_distr::{Distribution, Normal, Uniform};
 
 pub type NttPlan = tfhe_ntt::prime64::Plan;
@@ -238,15 +236,11 @@ pub fn polysub(
 /// # Returns:
 /// polynomial in Z_modulus[X]/(f) with coefficients in {0,1}
 #[allow(dead_code)]
-pub fn gen_binary_poly(size: usize, seed: Option<u64>) -> Polynomial<i64> {
-    let between = Uniform::new(0, 2);
-    let mut rng = match seed {
-        Some(seed) => StdRng::seed_from_u64(seed),
-        None => StdRng::from_entropy(),
-    };
+pub fn gen_binary_poly<Rng: rand::Rng>(size: usize, rng: &mut Rng) -> Polynomial<i64> {
+    let between = Uniform::new(0, 2).unwrap();
     let mut coeffs = vec![0i64; size];
     for ci in &mut coeffs {
-        *ci = between.sample(&mut rng);
+        *ci = between.sample(rng);
     }
     Polynomial::new(coeffs)
 }
@@ -257,15 +251,11 @@ pub fn gen_binary_poly(size: usize, seed: Option<u64>) -> Polynomial<i64> {
 /// * `seed` - random seed
 /// # Returns:
 /// ternary polynomial with coefficients in {-1,0,+1}
-pub fn gen_ternary_poly(size: usize, seed: Option<u64>) -> Polynomial<i64> {
-    let between = Uniform::new(-1, 2);
-    let mut rng = match seed {
-        Some(seed) => StdRng::seed_from_u64(seed),
-        None => StdRng::from_entropy(),
-    };
+pub fn gen_ternary_poly<Rng: rand::Rng>(size: usize, rng: &mut Rng) -> Polynomial<i64> {
+    let between = Uniform::new(-1, 2).unwrap();
     let mut coeffs = vec![0i64; size];
     for ci in &mut coeffs {
-        *ci = between.sample(&mut rng);
+        *ci = between.sample(rng);
     }
     Polynomial::new(coeffs)
 }
@@ -277,15 +267,11 @@ pub fn gen_ternary_poly(size: usize, seed: Option<u64>) -> Polynomial<i64> {
 /// * `seed` - random seed
 /// # Returns:
 /// uniform polynomial with coefficients in {0,1,...,q-1}
-pub fn gen_uniform_poly(size: usize, q: i64, seed: Option<u64>) -> Polynomial<i64> {
-    let between = Uniform::new(0, q);
-    let mut rng = match seed {
-        Some(seed) => StdRng::seed_from_u64(seed),
-        None => StdRng::from_entropy(),
-    };
+pub fn gen_uniform_poly<Rng: rand::Rng>(size: usize, q: i64, rng: &mut Rng) -> Polynomial<i64> {
+    let between = Uniform::new(0, q).unwrap();
     let mut coeffs = vec![0i64; size];
     for ci in &mut coeffs {
-        *ci = between.sample(&mut rng);
+        *ci = between.sample(rng);
     }
     mod_coeffs(Polynomial::new(coeffs), q)
 }
@@ -298,15 +284,11 @@ pub fn gen_uniform_poly(size: usize, q: i64, seed: Option<u64>) -> Polynomial<i6
 /// # Returns:
 /// polynomial with coefficients sampled from a normal distribution
 #[allow(dead_code)]
-pub fn gen_normal_poly(size: usize, sigma: f64, seed: Option<u64>) -> Polynomial<i64> {
+pub fn gen_normal_poly<Rng: rand::Rng>(size: usize, sigma: f64, rng: &mut Rng) -> Polynomial<i64> {
     let normal = Normal::new(0.0_f64, sigma).unwrap();
-    let mut rng = match seed {
-        Some(seed) => StdRng::seed_from_u64(seed),
-        None => StdRng::from_entropy(),
-    };
     let mut coeffs = vec![0i64; size];
     for ci in &mut coeffs {
-        *ci = normal.sample(&mut rng).round() as i64;
+        *ci = normal.sample(rng).round() as i64;
     }
     Polynomial::new(coeffs)
 }
