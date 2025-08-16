@@ -20,10 +20,10 @@ use polynomial_ring::Polynomial;
 /// let decrypted_m = ring_lwe::decrypt::decrypt(&sk, &ct, &params);
 /// ```
 pub fn decrypt(
-    sk: &Polynomial<i64>,      // Secret key
-    ct: &[Polynomial<i64>; 2], // Array of ciphertext polynomials
+    sk: &Polynomial<i32>,      // Secret key
+    ct: &[Polynomial<i32>; 2], // Array of ciphertext polynomials
     params: &Parameters,
-) -> Polynomial<i64> {
+) -> Polynomial<i32> {
     let (_n, q, t, f) = (params.n, params.q, params.t, &params.f);
     let scaled_pt = polyadd(&polymul_fast(&ct[1], sk, q, &params.ntt_plan), &ct[0], q, f);
     let mut decrypted_coeffs = Vec::with_capacity(scaled_pt.coeffs().len());
@@ -52,14 +52,14 @@ pub fn decrypt(
 /// let decrypted_message = ring_lwe::decrypt::decrypt_bytes(&sk, &ciphertext, &params);
 /// ```
 pub fn decrypt_bytes(sk: &SecKey, ciphertext: &[u8], params: &Parameters) -> Vec<u8> {
-    // Decode the base64 secret key string and deserialize into a vector of i64 coefficients
+    // Decode the base64 secret key string and deserialize into a vector of i32 coefficients
     let sk = Polynomial::new(sk.0.clone());
 
-    // Decode the Base64 ciphertext string and deserialize into vector of i64 coefficients
-    let ciphertext_array: Vec<i64> = decompress(ciphertext);
+    // Decode the Base64 ciphertext string and deserialize into vector of i32 coefficients
+    let ciphertext_array: Vec<i32> = decompress(ciphertext);
 
     let num_blocks = ciphertext_array.len() / (2 * params.n);
-    let mut decrypted_bits: Vec<i64> = Vec::new();
+    let mut decrypted_bits: Vec<i32> = Vec::new();
 
     for i in 0..num_blocks {
         let c0 =

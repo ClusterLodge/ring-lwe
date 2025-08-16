@@ -24,12 +24,12 @@ use rand::{rngs::StdRng, SeedableRng};
 /// let ct = ring_lwe::encrypt::encrypt(&pk, &m, &params, None);
 /// ```
 pub fn encrypt<Rng: rand::Rng>(
-    pk: &[Polynomial<i64>; 2], // Public key (b, a)
-    m: &Polynomial<i64>,       // Plaintext polynomial
+    pk: &[Polynomial<i32>; 2], // Public key (b, a)
+    m: &Polynomial<i32>,       // Plaintext polynomial
     params: &Parameters,       //parameters (n,q,t,f)
-    inv_t: i64,
+    inv_t: i32,
     rng: &mut Rng,
-) -> [Polynomial<i64>; 2] {
+) -> [Polynomial<i32>; 2] {
     let (n, q, f, ntt_plan) = (params.n, params.q, &params.f, &params.ntt_plan);
     // Scale the plaintext polynomial. use floor(m*q/t) rather than floor (q/t)*m
     let scaled_m = mod_coeffs(m * inv_t, q);
@@ -80,7 +80,7 @@ pub fn encrypt_bytes(pk: &PubKey, message: &[u8], params: &Parameters) -> Vec<u8
     // Convert each byte into its 8-bit representation (MSB first)
     let message_bits = message
         .iter()
-        .flat_map(|byte| (0..8).rev().map(move |i| ((byte >> i) & 1) as i64));
+        .flat_map(|byte| (0..8).rev().map(move |i| ((byte >> i) & 1) as i32));
 
     let message_chunks = message_bits.chunks(params.n); // Pack bits into polynomials of size `n`
                                                         // Convert bits into a vector of Polynomials
@@ -90,7 +90,7 @@ pub fn encrypt_bytes(pk: &PubKey, message: &[u8], params: &Parameters) -> Vec<u8
 
     let inv_t = modinverse::modinverse(params.t, params.q).expect("invalid t and q");
     // Encrypt each integer message block
-    let mut ciphertext_list: Vec<i64> = Vec::new();
+    let mut ciphertext_list: Vec<i32> = Vec::new();
     for message_block in message_blocks {
         let ciphertext = encrypt(&pk, &message_block, params, inv_t, &mut rng);
         append_block(&mut ciphertext_list, ciphertext[0].coeffs(), params.n);
