@@ -24,7 +24,7 @@
     pub fn test_hom_add() {
         let mut rng = rand::rng();
         let params = Parameters::default(); // Adjust this if needed
-        let (t, f) = (params.t, &params.f);
+        let (q, t, f) = (params.q, params.t, &params.f);
 
         // Create polynomials from ints
         let m0_poly = Polynomial::new(vec![1, 0, 1]);
@@ -33,9 +33,10 @@
         let plaintext_sum = polyadd(&m0_poly, &m1_poly, t, &f);
         let (pk, sk) = keygen(&params, &mut rng);
 
+        let inv_t = modinverse::modinverse(t, q).unwrap();
         // Encrypt plaintext messages
-        let u = encrypt(&pk, &m0_poly, &params, &mut rng);
-        let v = encrypt(&pk, &m1_poly, &params, &mut rng);
+        let u = encrypt(&pk, &m0_poly, &params, inv_t, &mut rng);
+        let v = encrypt(&pk, &m1_poly, &params, inv_t, &mut rng);
 
         // Compute sum of encrypted data
         let ciphertext_sum = [&u[0] + &v[0], &u[1] + &v[1]];
@@ -66,9 +67,11 @@
         // Generate the keypair
         let (pk, sk) = keygen(&params, &mut rng);
 
+        let inv_t = modinverse::modinverse(t, q).unwrap();
+
         // Encrypt plaintext messages
-        let u = encrypt(&pk, &m0_poly, &params, &mut rng);
-        let v = encrypt(&pk, &m1_poly, &params, &mut rng);
+        let u = encrypt(&pk, &m0_poly, &params, inv_t, &mut rng);
+        let v = encrypt(&pk, &m1_poly, &params, inv_t, &mut rng);
 
         let plaintext_prod = polymul(&m0_poly, &m1_poly, t, &f);
         //compute product of encrypted data, using non-standard multiplication

@@ -1,18 +1,21 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use polynomial_ring::Polynomial;
+use rand::SeedableRng as _;
 use ring_lwe::decrypt::{decrypt, decrypt_bytes};
 use ring_lwe::encrypt::{encrypt, encrypt_bytes};
 use ring_lwe::keygen::{keygen, keygen_bytes};
 use ring_lwe::utils::Parameters;
-use rand::SeedableRng as _;
 
 fn bench_encrypt(c: &mut Criterion) {
     let params = Parameters::default();
+    let inv_t = modinverse::modinverse(params.t, params.q).unwrap();
     let mut rng = rand::rngs::StdRng::from_os_rng();
     let (pk, _) = keygen(&params, &mut rng);
     let m_b = Polynomial::new(vec![0, 1, 0, 1, 1, 0, 1, 0]); // Example binary message
 
-    c.bench_function("encrypt", |b| b.iter(|| encrypt(&pk, &m_b, &params, &mut rng)));
+    c.bench_function("encrypt", |b| {
+        b.iter(|| encrypt(&pk, &m_b, &params, inv_t, &mut rng))
+    });
 }
 
 const MESSAGE_SMALL: &str = "small";
@@ -74,11 +77,12 @@ fn bench_encrypt_bytes_long(c: &mut Criterion) {
 
 fn bench_decrypt(c: &mut Criterion) {
     let params = Parameters::default();
+    let inv_t = modinverse::modinverse(params.t, params.q).unwrap();
     let mut rng = rand::rngs::StdRng::from_os_rng();
 
     let (pk, sk) = keygen(&params, &mut rng);
     let m_b = Polynomial::new(vec![0, 1, 0, 1, 1, 0, 1, 0]); // Example binary message
-    let ct = encrypt(&pk, &m_b, &params, &mut rng);
+    let ct = encrypt(&pk, &m_b, &params, inv_t, &mut rng);
 
     c.bench_function("decrypt", |b| b.iter(|| decrypt(&sk, &ct, &params)));
 }

@@ -47,19 +47,18 @@ impl Default for Parameters {
 /// polynomial in Z_modulus[X]
 pub fn mod_coeffs(x: Polynomial<i64>, modulus: i64) -> Polynomial<i64> {
     let coeffs = x.coeffs();
-    let mut newcoeffs = vec![];
-    let mut c;
     if coeffs.is_empty() {
         // return original input for the zero polynomial
         x
     } else {
-        for coeff in coeffs {
-            c = coeff.rem_euclid(modulus);
+        let mut newcoeffs = Vec::with_capacity(coeffs.len());
+        newcoeffs.extend(coeffs.iter().cloned().map(|coeff| {
+            let mut c = coeff.rem_euclid(modulus);
             if c > modulus / 2 {
                 c -= modulus;
             }
-            newcoeffs.push(c);
-        }
+            c
+        }));
         Polynomial::new(newcoeffs)
     }
 }
@@ -138,15 +137,18 @@ pub fn polymul_fast(
     let n1 = x.coeffs().len();
     let n2 = y.coeffs().len();
     // Compute the nearest power of the max of input degrees+1
+    // TODO it should be just plan's length; it just happens to work most of the time
     let n = std::cmp::max(n1, n2).next_power_of_two();
     // Pad coefficients
     let x_pad = {
-        let mut coeffs = x.coeffs().to_vec();
+        let mut coeffs = Vec::with_capacity(n);
+        coeffs.extend(x.coeffs().iter().cloned());
         coeffs.resize(n, 0);
         coeffs
     };
     let y_pad = {
-        let mut coeffs = y.coeffs().to_vec();
+        let mut coeffs = Vec::with_capacity(n);
+        coeffs.extend(y.coeffs().iter().cloned());
         coeffs.resize(n, 0);
         coeffs
     };
@@ -161,8 +163,14 @@ pub fn polymul_fast(
 }
 
 fn polymul_ntt(x: &[i64], y: &[i64], q: i64, ntt_plan: &NttPlan) -> Vec<i64> {
-    let mut x1 = x.iter().map(|&c| c.rem_euclid(q) as _).collect::<Vec<_>>();
-    let mut y1 = y.iter().map(|&c| c.rem_euclid(q) as _).collect::<Vec<_>>();
+    let mut x1 = x
+        .iter()
+        .map(|&c| (if c < 0 { c + q } else { c }) as _)
+        .collect::<Vec<_>>();
+    let mut y1 = y
+        .iter()
+        .map(|&c| (if c < 0 { c + q } else { c }) as _)
+        .collect::<Vec<_>>();
 
     ntt_plan.fwd(&mut x1);
     ntt_plan.fwd(&mut y1);

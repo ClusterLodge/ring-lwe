@@ -1,6 +1,6 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use ring_lwe::utils::{gen_uniform_poly, polymul, polymul_fast, Parameters};
 use rand::SeedableRng as _;
+use ring_lwe::utils::{gen_uniform_poly, polymul, polymul_fast, Parameters};
 
 fn benchmark_polymul_uniform(c: &mut Criterion) {
     let mut rng = rand::rngs::StdRng::from_os_rng();

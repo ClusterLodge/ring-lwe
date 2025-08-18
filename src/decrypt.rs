@@ -29,7 +29,7 @@ pub fn decrypt(
     let mut decrypted_coeffs = Vec::with_capacity(scaled_pt.coeffs().len());
     for c in scaled_pt.coeffs().iter() {
         let s = nearest_int(c * t, q);
-        decrypted_coeffs.push(s.rem_euclid(t));
+        decrypted_coeffs.push(if t == 2 { s & 1 } else { s.rem_euclid(t) });
     }
     Polynomial::new(decrypted_coeffs)
 }

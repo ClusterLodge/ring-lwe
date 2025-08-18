@@ -1,7 +1,7 @@
 use criterion::{criterion_group, criterion_main, Criterion};
+use rand::SeedableRng as _;
 use ring_lwe::keygen::{keygen, keygen_bytes};
 use ring_lwe::utils::Parameters;
-use rand::SeedableRng as _;
 
 fn bench_params(c: &mut Criterion) {
     c.bench_function("params", |b| b.iter(|| Parameters::default()));

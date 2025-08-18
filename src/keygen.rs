@@ -15,7 +15,10 @@ use rand::{rngs::StdRng, SeedableRng};
 /// let params = ring_lwe::utils::Parameters::default();
 /// let (pk, sk) = ring_lwe::keygen::keygen(&params, None);
 /// ```
-pub fn keygen<Rng: rand::Rng>(params: &Parameters, rng: &mut Rng) -> ([Polynomial<i64>; 2], Polynomial<i64>) {
+pub fn keygen<Rng: rand::Rng>(
+    params: &Parameters,
+    rng: &mut Rng,
+) -> ([Polynomial<i64>; 2], Polynomial<i64>) {
     //rename parameters
     let (n, q, f) = (params.n, params.q, &params.f);
 
