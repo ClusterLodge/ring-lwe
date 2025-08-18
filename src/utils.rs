@@ -134,11 +134,7 @@ pub fn polymul_fast(
     q: i64,
     ntt_plan: &NttPlan,
 ) -> Polynomial<i64> {
-    let n1 = x.coeffs().len();
-    let n2 = y.coeffs().len();
-    // Compute the nearest power of the max of input degrees+1
-    // TODO it should be just plan's length; it just happens to work most of the time
-    let n = std::cmp::max(n1, n2).next_power_of_two();
+    let n = ntt_plan.ntt_size();
     // Pad coefficients
     let x_pad = {
         let mut coeffs = Vec::with_capacity(n);
