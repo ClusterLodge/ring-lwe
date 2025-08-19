@@ -41,6 +41,7 @@ pub fn gen_noise_poly(size: usize, rng: &mut impl Rng) -> Polynomial<i64> {
         cbinomial::<4, 16, _>(&mut coeffs, rng);
     }
     coeffs.truncate(size);
+    // coeffs.fill(0);   // STUB for debug
     Polynomial::new(coeffs)
 }
 

@@ -27,12 +27,13 @@ pub fn encrypt<Rng: rand::Rng>(
     pk: &[Polynomial<i64>; 2], // Public key (b, a)
     m: &Polynomial<i64>,       // Plaintext polynomial
     params: &Parameters,       //parameters (n,q,t,f)
-    inv_t: i64,
+    _inv_t: i64,
     rng: &mut Rng,
 ) -> [Polynomial<i64>; 2] {
     let (n, q, f, ntt_plan) = (params.n, params.q, &params.f, &params.ntt_plan);
     // Scale the plaintext polynomial. use floor(m*q/t) rather than floor (q/t)*m
-    let scaled_m = mod_coeffs(m * inv_t, q);
+    // TODO why _inv_t doesn't work???
+    let scaled_m = mod_coeffs((m * q) / params.t, q);
 
     // Generate random polynomials
     let e1 = gen_noise_poly(n, rng);
@@ -77,12 +78,12 @@ pub fn encrypt_bytes(pk: &PubKey, message: &[u8], params: &Parameters) -> Vec<u8
     let pk_a = Polynomial::new(pk_arr[params.n..].to_vec());
     let pk = [pk_b, pk_a];
 
-    // Convert each byte into its 8-bit representation (MSB first)
-    let message_bits = message
+    // Split each byte into its 4-bit nibble
+    let message_nibbles = message
         .iter()
-        .flat_map(|byte| (0..8).rev().map(move |i| ((byte >> i) & 1) as i64));
+        .flat_map(|byte| (0..2).map(move |i| ((byte >> (4 * i)) & 0xF) as i64));
 
-    let message_chunks = message_bits.chunks(params.n); // Pack bits into polynomials of size `n`
+    let message_chunks = message_nibbles.chunks(params.n); // Pack bits into polynomials of size `n`
                                                         // Convert bits into a vector of Polynomials
     let message_blocks = message_chunks
         .into_iter()

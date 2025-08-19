@@ -59,7 +59,7 @@ pub fn decrypt_bytes(sk: &SecKey, ciphertext: &[u8], params: &Parameters) -> Vec
     let ciphertext_array: Vec<i64> = decompress(ciphertext);
 
     let num_blocks = ciphertext_array.len() / (2 * params.n);
-    let mut decrypted_bits: Vec<i64> = Vec::new();
+    let mut decrypted_nibbles: Vec<i64> = Vec::new();
 
     for i in 0..num_blocks {
         let c0 =
@@ -70,17 +70,17 @@ pub fn decrypt_bytes(sk: &SecKey, ciphertext: &[u8], params: &Parameters) -> Vec
         let ct = [c0, c1];
 
         // Decrypt the ciphertext
-        decrypted_bits.extend(decrypt(&sk, &ct, params).coeffs());
+        decrypted_nibbles.extend(decrypt(&sk, &ct, params).coeffs());
     }
 
     // Convert decrypted bits into a string
-    let decrypted_message: Vec<u8> = decrypted_bits
-        .chunks(8)
+    let decrypted_message: Vec<u8> = decrypted_nibbles
+        .chunks(2)
         .map(|byte| {
             let bit_str: u8 = byte
                 .iter()
                 .enumerate()
-                .map(|(idx, &b)| ((b as u8) << (7 - idx as u32)))
+                .map(|(idx, &b)| ((b as u8) << ((idx * 4) as u32)))
                 .sum();
             bit_str
         })

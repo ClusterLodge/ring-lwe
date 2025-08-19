@@ -23,7 +23,7 @@ impl Default for Parameters {
     fn default() -> Self {
         let n = 1024;
         let q = 12289i64;
-        let t = 2;
+        let t = 16;
         let ntt_plan = NttPlan::try_new(n, q as u64).expect("Failed to create NTT plan");
         let mut poly_vec = vec![0i64; n + 1];
         poly_vec[0] = 1;
