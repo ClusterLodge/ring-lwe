@@ -36,7 +36,7 @@ pub(crate) fn cbinomial<const BITS: u32, const BATCH: u32, Dst: From<i32>>(
 /// # Returns:
 /// ternary polynomial with coefficients in {-1,0,+1}
 pub fn gen_ternary_poly(size: usize, rng: &mut impl Rng) -> Polynomial<i64> {
-    let mut coeffs = vec![0i64; size];
+    let mut coeffs = Vec::with_capacity(size);
     while coeffs.len() < size {
         cbinomial::<4, 16, _>(&mut coeffs, rng);
     }

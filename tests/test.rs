@@ -14,6 +14,10 @@
         let keypair = keygen_bytes(&params);
         let pk = keypair.public;
         let sk = keypair.secret;
+        assert_eq!(pk.0.len(), 2 * params.n);
+        assert_eq!(sk.0.len(), params.n);
+        dbg!(&pk.0.len());
+        dbg!(&sk.0.len());
         let ciphertext_string = encrypt_bytes(&pk, &message, &params);
         let decrypted_message = decrypt_bytes(&sk, &ciphertext_string, &params);
         assert_eq!(message, decrypted_message, "test failed");
