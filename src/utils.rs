@@ -2,6 +2,8 @@ use bincode;
 use polynomial_ring::Polynomial;
 use rand_distr::{Distribution, Normal, Uniform};
 
+pub use crate::randomness::gen_ternary_poly;
+
 pub type NttPlan = tfhe_ntt::prime64::Plan;
 
 /// Ring-LWE parameters
@@ -242,21 +244,6 @@ pub fn polysub(
 #[allow(dead_code)]
 pub fn gen_binary_poly<Rng: rand::Rng>(size: usize, rng: &mut Rng) -> Polynomial<i64> {
     let between = Uniform::new(0, 2).unwrap();
-    let mut coeffs = vec![0i64; size];
-    for ci in &mut coeffs {
-        *ci = between.sample(rng);
-    }
-    Polynomial::new(coeffs)
-}
-
-/// Generate a ternary polynomial
-/// # Arguments:
-/// * `size` - number of coefficients
-/// * `seed` - random seed
-/// # Returns:
-/// ternary polynomial with coefficients in {-1,0,+1}
-pub fn gen_ternary_poly<Rng: rand::Rng>(size: usize, rng: &mut Rng) -> Polynomial<i64> {
-    let between = Uniform::new(-1, 2).unwrap();
     let mut coeffs = vec![0i64; size];
     for ci in &mut coeffs {
         *ci = between.sample(rng);
