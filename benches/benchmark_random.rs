@@ -16,7 +16,7 @@ fn bench_distr_weighted_alias_index_gen(c: &mut Criterion) {
     let gen = rand_distr::weighted::WeightedAliasIndex::new(weights.clone()).unwrap();
     // we use 8 times less data because it works with bytes, and we use normal
     // size for ternary because it is works with bits.
-    let mut data = vec![0i64; params.n / 8];
+    let mut data = vec![0i32; params.n / 8];
     let mut rng = rand::rng();
 
     c.bench_function("random WeightedAliasIndex::sample", |b| {
@@ -42,7 +42,7 @@ fn bench_distr_weighted_index_gen(c: &mut Criterion) {
     let gen = rand_distr::weighted::WeightedIndex::new(weights).unwrap();
     // we use 8 times less data because it works with bytes, and we use normal
     // size for ternary because it is works with bits.
-    let mut data = vec![0i64; params.n / 8];
+    let mut data = vec![0i32; params.n / 8];
     let mut rng = rand::rng();
 
     c.bench_function("random WeightedIndex::sample", |b| {
@@ -58,7 +58,7 @@ fn bench_distr_ternary(c: &mut Criterion) {
     use rand_distr::Uniform;
 
     let params = Parameters::default();
-    let mut data = vec![0i64; params.n];
+    let mut data = vec![0i32; params.n];
     let between = Uniform::new(-1, 2).unwrap();
     let mut rng = rand::rng();
 

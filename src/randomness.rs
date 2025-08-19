@@ -35,7 +35,7 @@ pub(crate) fn cbinomial<const BITS: u32, const BATCH: u32, Dst: From<i32>>(
 /// * `seed` - random seed
 /// # Returns:
 /// noise polynomial with cbinomial distribution
-pub fn gen_noise_poly(size: usize, rng: &mut impl Rng) -> Polynomial<i64> {
+pub fn gen_noise_poly(size: usize, rng: &mut impl Rng) -> Polynomial<i32> {
     let mut coeffs = Vec::with_capacity(size);
     while coeffs.len() < size {
         cbinomial::<4, 16, _>(&mut coeffs, rng);

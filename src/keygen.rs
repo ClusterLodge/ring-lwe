@@ -18,7 +18,7 @@ use rand::{rngs::StdRng, SeedableRng};
 pub fn keygen<Rng: rand::Rng>(
     params: &Parameters,
     rng: &mut Rng,
-) -> ([Polynomial<i64>; 2], Polynomial<i64>) {
+) -> ([Polynomial<i32>; 2], Polynomial<i32>) {
     //rename parameters
     let (n, q, f) = (params.n, params.q, &params.f);
 
@@ -37,9 +37,9 @@ pub fn keygen<Rng: rand::Rng>(
     ([b, a], sk)
 }
 
-pub struct PubKey(pub Vec<i64>);
+pub struct PubKey(pub Vec<i32>);
 
-pub struct SecKey(pub Vec<i64>);
+pub struct SecKey(pub Vec<i32>);
 
 pub struct KeyPair {
     pub public: PubKey,
@@ -63,7 +63,7 @@ pub fn keygen_bytes(params: &Parameters) -> KeyPair {
     let mut rng = StdRng::from_os_rng();
     let (pk, sk) = keygen(params, &mut rng);
 
-    let mut pk_coeffs: Vec<i64> = Vec::with_capacity(2 * params.n);
+    let mut pk_coeffs: Vec<i32> = Vec::with_capacity(2 * params.n);
     append_block(&mut pk_coeffs, pk[0].coeffs(), params.n);
     append_block(&mut pk_coeffs, pk[1].coeffs(), params.n);
 
