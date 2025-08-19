@@ -2,7 +2,7 @@ use bincode;
 use polynomial_ring::Polynomial;
 use rand_distr::{Distribution, Normal, Uniform};
 
-pub use crate::randomness::gen_ternary_poly;
+pub use crate::randomness::gen_noise_poly;
 
 pub type NttPlan = tfhe_ntt::prime64::Plan;
 

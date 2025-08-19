@@ -1,5 +1,5 @@
 use crate::utils::{
-    append_block, gen_ternary_poly, gen_uniform_poly, polyadd, polyinv, polymul_fast, Parameters,
+    append_block, gen_noise_poly, gen_uniform_poly, polyadd, polyinv, polymul_fast, Parameters,
 };
 use polynomial_ring::Polynomial;
 use rand::{rngs::StdRng, SeedableRng};
@@ -23,9 +23,9 @@ pub fn keygen<Rng: rand::Rng>(
     let (n, q, f) = (params.n, params.q, &params.f);
 
     // Generate a public and secret key
-    let sk = gen_ternary_poly(n, rng);
+    let sk = gen_noise_poly(n, rng);
     let a = gen_uniform_poly(n, q, rng);
-    let e = gen_ternary_poly(n, rng);
+    let e = gen_noise_poly(n, rng);
     let b = polyadd(
         &polymul_fast(&polyinv(&a, q), &sk, q, &params.ntt_plan),
         &polyinv(&e, q),

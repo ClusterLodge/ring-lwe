@@ -29,13 +29,13 @@ pub(crate) fn cbinomial<const BITS: u32, const BATCH: u32, Dst: From<i32>>(
     }
 }
 
-/// Generate a ternary polynomial
+/// Generate a noise polynomial
 /// # Arguments:
 /// * `size` - number of coefficients
 /// * `seed` - random seed
 /// # Returns:
-/// ternary polynomial with coefficients in {-1,0,+1}
-pub fn gen_ternary_poly(size: usize, rng: &mut impl Rng) -> Polynomial<i64> {
+/// noise polynomial with cbinomial distribution
+pub fn gen_noise_poly(size: usize, rng: &mut impl Rng) -> Polynomial<i64> {
     let mut coeffs = Vec::with_capacity(size);
     while coeffs.len() < size {
         cbinomial::<4, 16, _>(&mut coeffs, rng);

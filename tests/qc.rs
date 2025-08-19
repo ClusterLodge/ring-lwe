@@ -3,7 +3,7 @@ use ring_lwe::{
 };
 
 #[quickcheck_macros::quickcheck]
-pub fn qc_test_basic(mut message: Vec<u8>) {
+pub fn qc_basic(mut message: Vec<u8>) {
     message.push(1);
     let params = Parameters::default();
     let keypair = keygen_bytes(&params);

@@ -1,7 +1,7 @@
 use crate::{
     keygen::PubKey,
     utils::{
-        append_block, compress, gen_ternary_poly, mod_coeffs, polyadd, polymul_fast, Parameters,
+        append_block, compress, gen_noise_poly, mod_coeffs, polyadd, polymul_fast, Parameters,
     },
 };
 use itertools::Itertools as _;
@@ -35,9 +35,9 @@ pub fn encrypt<Rng: rand::Rng>(
     let scaled_m = mod_coeffs(m * inv_t, q);
 
     // Generate random polynomials
-    let e1 = gen_ternary_poly(n, rng);
-    let e2 = gen_ternary_poly(n, rng);
-    let u = gen_ternary_poly(n, rng);
+    let e1 = gen_noise_poly(n, rng);
+    let e2 = gen_noise_poly(n, rng);
+    let u = gen_noise_poly(n, rng);
 
     // Compute ciphertext components
     let ct0 = polyadd(
