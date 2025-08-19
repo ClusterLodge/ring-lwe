@@ -152,7 +152,7 @@ pub fn polymul_fast(
     };
 
     // Perform the polynomial multiplication
-    let r_coeffs = polymul_ntt(&x_pad, &y_pad, q, ntt_plan);
+    let r_coeffs = polymul_ntt(x_pad, y_pad, q, ntt_plan);
 
     // Construct the result polynomial and reduce modulo f
     let r = Polynomial::new(r_coeffs);
@@ -160,15 +160,21 @@ pub fn polymul_fast(
     mod_coeffs(r, q)
 }
 
-fn polymul_ntt(x: &[i32], y: &[i32], q: i32, ntt_plan: &NttPlan) -> Vec<i32> {
-    let mut x1 = x
-        .iter()
-        .map(|&c| (if c < 0 { c + q } else { c }) as _)
-        .collect::<Vec<_>>();
-    let mut y1 = y
-        .iter()
-        .map(|&c| (if c < 0 { c + q } else { c }) as _)
-        .collect::<Vec<_>>();
+fn polymul_ntt(mut x: Vec<i32>, mut y: Vec<i32>, q: i32, ntt_plan: &NttPlan) -> Vec<i32> {
+    for c in &mut x {
+        if *c < 0 {
+            *c += q;
+        }
+    }
+    for c in &mut y {
+        if *c < 0 {
+            *c += q;
+        }
+    }
+
+    // Safety: it is ok to transmute Vec<i32> to Vec<u32>.
+    let mut x1: Vec<u32> = unsafe { std::mem::transmute(x) };
+    let mut y1: Vec<u32> = unsafe { std::mem::transmute(y) };
 
     ntt_plan.fwd(&mut x1);
     ntt_plan.fwd(&mut y1);
@@ -342,7 +348,7 @@ mod tests {
 
         p1.resize(N, 0);
         p2.resize(N, 0);
-        let r = polymul_ntt(&p1, &p2, 12289, &ntt_plan);
+        let r = polymul_ntt(p1, p2, 12289, &ntt_plan);
         let r = Polynomial::new(r);
         assert_eq!(r.coeffs(), vec![64])
     }

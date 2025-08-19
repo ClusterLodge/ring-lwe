@@ -149,6 +149,6 @@
         let pk = keypair.public;
         let ciphertext = encrypt_bytes(&pk, &message_256, &params);
         // two block length; add extra 8 bytes for bincode metadata.
-        // So, the cyphertext is 2 * 8 * 4 = 64 times larger than the plaintext.
-        assert_eq!(ciphertext.len(), 64 * message_256.len() + 8);
+        // So, the cyphertext is 8 * 4 = 64 times larger than the plaintext.
+        assert_eq!(ciphertext.len(), 32 * message_256.len() + 8);
     }
