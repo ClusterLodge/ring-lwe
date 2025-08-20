@@ -1,6 +1,7 @@
 use crate::{
     keygen::SecKey,
-    utils::{decompress, nearest_int, polyadd, polymul_fast, Parameters},
+    ntt::Fwd,
+    utils::{decompress, nearest_int, polyadd, polymul_fast2, Parameters},
 };
 use polynomial_ring::Polynomial;
 
@@ -20,12 +21,17 @@ use polynomial_ring::Polynomial;
 /// let decrypted_m = ring_lwe::decrypt::decrypt(&sk, &ct, &params);
 /// ```
 pub fn decrypt(
-    sk: &Polynomial<i32>,      // Secret key
+    sk_fwd: Fwd<u32>,          // Secret key
     ct: &[Polynomial<i32>; 2], // Array of ciphertext polynomials
     params: &Parameters,
 ) -> Polynomial<i32> {
     let (_n, q, t, f) = (params.n, params.q, params.t, &params.f);
-    let scaled_pt = polyadd(&polymul_fast(&ct[1], sk, q, &params.ntt_plan), &ct[0], q, f);
+    let scaled_pt = polyadd(
+        &polymul_fast2(sk_fwd, &ct[1], q, &params.ntt_plan),
+        &ct[0],
+        q,
+        f,
+    );
     let mut decrypted_coeffs = Vec::with_capacity(scaled_pt.coeffs().len());
     for c in scaled_pt.coeffs().iter() {
         let s = nearest_int(c * t, q);
@@ -55,7 +61,10 @@ pub fn decrypt_bytes(sk: &SecKey, ciphertext: &[u8], params: &Parameters) -> Vec
     // Decode the base64 secret key string and deserialize into a vector of i32 coefficients
     let sk = Polynomial::new(sk.0.clone());
 
-    // Decode the Base64 ciphertext string and deserialize into vector of i32 coefficients
+    let (q, ntt_plan) = (params.q, &params.ntt_plan);
+    let sk_fwd = Fwd::<u32>::new(sk.coeffs(), q, ntt_plan);
+
+    // Decode the Base32 ciphertext string and deserialize into vector of i32 coefficients
     let ciphertext_array: Vec<i32> = decompress(ciphertext);
 
     let num_blocks = ciphertext_array.len() / (2 * params.n);
@@ -70,7 +79,7 @@ pub fn decrypt_bytes(sk: &SecKey, ciphertext: &[u8], params: &Parameters) -> Vec
         let ct = [c0, c1];
 
         // Decrypt the ciphertext
-        decrypted_nibbles.extend(decrypt(&sk, &ct, params).coeffs());
+        decrypted_nibbles.extend(decrypt(sk_fwd.clone(), &ct, params).coeffs());
     }
 
     // Convert decrypted bits into a string

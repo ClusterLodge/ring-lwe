@@ -26,6 +26,9 @@ criterion = "0.5.1"
 quickcheck = "1.0.3"
 quickcheck_macros = "1.1.0"
 
+[features]
+nightly = ["tfhe-ntt/nightly"]
+
 [[bench]]
 name = "benchmark_polymul"
 path = "benches/benchmark_polymul.rs"
