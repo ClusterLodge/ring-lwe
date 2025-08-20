@@ -9,7 +9,7 @@ pub(crate) fn cbinomial<const BITS: u32, const BATCH: u32, Dst: From<i32>>(
     let left = rng.next_u64();
     let right = rng.next_u64();
 
-    let summation_mask = (0..(BATCH as u32))
+    let summation_mask = (0..BATCH)
         .map(|group_id| 1 << (BITS * group_id))
         .fold(0, |a, b| a | b);
 
