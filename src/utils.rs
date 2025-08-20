@@ -1,8 +1,7 @@
+use crate::ntt::{Fwd, NttPlan};
 use bincode;
 use polynomial_ring::Polynomial;
 use rand_distr::{Distribution, Normal, Uniform};
-
-pub type NttPlan = tfhe_ntt::prime64::Plan;
 
 /// Ring-LWE parameters
 #[derive(Debug)]
@@ -134,23 +133,18 @@ pub fn polymul_fast(
     q: i64,
     ntt_plan: &NttPlan,
 ) -> Polynomial<i64> {
-    let n = ntt_plan.ntt_size();
-    // Pad coefficients
-    let x_pad = {
-        let mut coeffs = Vec::with_capacity(n);
-        coeffs.extend(x.coeffs().iter().cloned());
-        coeffs.resize(n, 0);
-        coeffs
-    };
-    let y_pad = {
-        let mut coeffs = Vec::with_capacity(n);
-        coeffs.extend(y.coeffs().iter().cloned());
-        coeffs.resize(n, 0);
-        coeffs
-    };
+    let x_fwd = Fwd::<u64>::new(x.coeffs(), q, ntt_plan);
+    polymul_fast2(x_fwd, y, q, ntt_plan)
+}
 
-    // Perform the polynomial multiplication
-    let r_coeffs = polymul_ntt(&x_pad, &y_pad, q, ntt_plan);
+pub fn polymul_fast2(
+    x_fwd: Fwd<u64>,
+    y: &Polynomial<i64>,
+    q: i64,
+    ntt_plan: &NttPlan,
+) -> Polynomial<i64> {
+    let y_fwd = Fwd::<u64>::new(y.coeffs(), q, ntt_plan);
+    let r_coeffs = polymul_ntt(x_fwd, y_fwd, q, ntt_plan);
 
     // Construct the result polynomial and reduce modulo f
     let r = Polynomial::new(r_coeffs);
@@ -158,22 +152,14 @@ pub fn polymul_fast(
     mod_coeffs(r, q)
 }
 
-fn polymul_ntt(x: &[i64], y: &[i64], q: i64, ntt_plan: &NttPlan) -> Vec<i64> {
-    let mut x1 = x
-        .iter()
-        .map(|&c| (if c < 0 { c + q } else { c }) as _)
-        .collect::<Vec<_>>();
-    let mut y1 = y
-        .iter()
-        .map(|&c| (if c < 0 { c + q } else { c }) as _)
-        .collect::<Vec<_>>();
+fn polymul_ntt(x: Fwd<u64>, y: Fwd<u64>, _q: i64, ntt_plan: &NttPlan) -> Vec<i64> {
+    let mut x = x.0;
+    let y = y.0;
 
-    ntt_plan.fwd(&mut x1);
-    ntt_plan.fwd(&mut y1);
-    ntt_plan.mul_assign_normalize(&mut x1, &y1);
-    ntt_plan.inv(&mut x1);
+    ntt_plan.mul_assign_normalize(&mut x, &y);
+    ntt_plan.inv(&mut x);
 
-    x1.into_iter().map(|c| c as i64).collect::<Vec<_>>()
+    unsafe { std::mem::transmute(x) }
 }
 
 /// Add two polynomials
@@ -349,12 +335,16 @@ mod tests {
     fn test_mul() {
         let ntt_plan = NttPlan::try_new(1024, 12289).expect("Failed to create NTT plan");
         const N: usize = 1024;
-        let mut p1 = vec![-8];
-        let mut p2 = vec![-8];
+        const Q: i64 = 12289;
+        let mut p1 = vec![-8i64];
+        let mut p2 = vec![-8i64];
 
         p1.resize(N, 0);
         p2.resize(N, 0);
-        let r = polymul_ntt(&p1, &p2, 12289, &ntt_plan);
+
+        let fwd1 = Fwd::<u64>::new(&p1, Q, &ntt_plan);
+        let fwd2 = Fwd::<u64>::new(&p1, Q, &ntt_plan);
+        let r = polymul_ntt(fwd1, fwd2, Q, &ntt_plan);
         let r = Polynomial::new(r);
         assert_eq!(r.coeffs(), vec![64])
     }

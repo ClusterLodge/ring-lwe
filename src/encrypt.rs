@@ -1,7 +1,8 @@
 use crate::{
     keygen::PubKey,
+    ntt::Fwd,
     utils::{
-        append_block, compress, gen_ternary_poly, mod_coeffs, polyadd, polymul_fast, Parameters,
+        append_block, compress, gen_ternary_poly, mod_coeffs, polyadd, polymul_fast2, Parameters,
     },
 };
 use itertools::Itertools as _;
@@ -24,15 +25,16 @@ use rand::{rngs::StdRng, SeedableRng};
 /// let ct = ring_lwe::encrypt::encrypt(&pk, &m, &params, None);
 /// ```
 pub fn encrypt<Rng: rand::Rng>(
-    pk: &[Polynomial<i64>; 2], // Public key (b, a)
-    m: &Polynomial<i64>,       // Plaintext polynomial
-    params: &Parameters,       //parameters (n,q,t,f)
-    inv_t: i64,
+    pk0_fwd: Fwd<u64>,
+    pk1_fwd: Fwd<u64>,
+    m: &Polynomial<i64>, // Plaintext polynomial
+    params: &Parameters, //parameters (n,q,t,f)
+    _inv_t: i64,
     rng: &mut Rng,
 ) -> [Polynomial<i64>; 2] {
-    let (n, q, f, ntt_plan) = (params.n, params.q, &params.f, &params.ntt_plan);
+    let (n, q, t, f, ntt_plan) = (params.n, params.q, params.t, &params.f, &params.ntt_plan);
     // Scale the plaintext polynomial. use floor(m*q/t) rather than floor (q/t)*m
-    let scaled_m = mod_coeffs(m * inv_t, q);
+    let scaled_m = mod_coeffs(m * q / t, q);
 
     // Generate random polynomials
     let e1 = gen_ternary_poly(n, rng);
@@ -41,12 +43,12 @@ pub fn encrypt<Rng: rand::Rng>(
 
     // Compute ciphertext components
     let ct0 = polyadd(
-        &polyadd(&polymul_fast(&pk[0], &u, q, ntt_plan), &e1, q, f),
+        &polyadd(&polymul_fast2(pk0_fwd, &u, q, ntt_plan), &e1, q, f),
         &scaled_m,
         q,
         f,
     );
-    let ct1 = polyadd(&polymul_fast(&pk[1], &u, q, ntt_plan), &e2, q, f);
+    let ct1 = polyadd(&polymul_fast2(pk1_fwd, &u, q, ntt_plan), &e2, q, f);
 
     [ct0, ct1]
 }
@@ -75,7 +77,11 @@ pub fn encrypt_bytes(pk: &PubKey, message: &[u8], params: &Parameters) -> Vec<u8
     // Split the public key into two polynomials
     let pk_b = Polynomial::new(pk_arr[..params.n].to_vec());
     let pk_a = Polynomial::new(pk_arr[params.n..].to_vec());
-    let pk = [pk_b, pk_a];
+
+    let (q, ntt_plan) = (params.q, &params.ntt_plan);
+
+    let pk0_fwd = Fwd::<u64>::new(pk_b.coeffs(), q, ntt_plan);
+    let pk1_fwd = Fwd::<u64>::new(pk_a.coeffs(), q, ntt_plan);
 
     // Convert each byte into its 8-bit representation (MSB first)
     let message_bits = message
@@ -92,7 +98,14 @@ pub fn encrypt_bytes(pk: &PubKey, message: &[u8], params: &Parameters) -> Vec<u8
     // Encrypt each integer message block
     let mut ciphertext_list: Vec<i64> = Vec::new();
     for message_block in message_blocks {
-        let ciphertext = encrypt(&pk, &message_block, params, inv_t, &mut rng);
+        let ciphertext = encrypt(
+            pk0_fwd.clone(),
+            pk1_fwd.clone(),
+            &message_block,
+            params,
+            inv_t,
+            &mut rng,
+        );
         append_block(&mut ciphertext_list, ciphertext[0].coeffs(), params.n);
         append_block(&mut ciphertext_list, ciphertext[1].coeffs(), params.n);
     }

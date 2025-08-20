@@ -4,17 +4,30 @@ use rand::SeedableRng as _;
 use ring_lwe::decrypt::{decrypt, decrypt_bytes};
 use ring_lwe::encrypt::{encrypt, encrypt_bytes};
 use ring_lwe::keygen::{keygen, keygen_bytes};
+use ring_lwe::ntt::Fwd;
 use ring_lwe::utils::Parameters;
 
 fn bench_encrypt(c: &mut Criterion) {
     let params = Parameters::default();
+    let (q, ntt_plan) = (params.q, &params.ntt_plan);
     let inv_t = modinverse::modinverse(params.t, params.q).unwrap();
     let mut rng = rand::rngs::StdRng::from_os_rng();
     let (pk, _) = keygen(&params, &mut rng);
     let m_b = Polynomial::new(vec![0, 1, 0, 1, 1, 0, 1, 0]); // Example binary message
+    let pk0_fwd = Fwd::<u64>::new(pk[1].coeffs(), q, ntt_plan);
+    let pk1_fwd = Fwd::<u64>::new(pk[0].coeffs(), q, ntt_plan);
 
     c.bench_function("encrypt", |b| {
-        b.iter(|| encrypt(&pk, &m_b, &params, inv_t, &mut rng))
+        b.iter(|| {
+            encrypt(
+                pk0_fwd.clone(),
+                pk1_fwd.clone(),
+                &m_b,
+                &params,
+                inv_t,
+                &mut rng,
+            )
+        })
     });
 }
 
@@ -79,12 +92,18 @@ fn bench_decrypt(c: &mut Criterion) {
     let params = Parameters::default();
     let inv_t = modinverse::modinverse(params.t, params.q).unwrap();
     let mut rng = rand::rngs::StdRng::from_os_rng();
+    let (q, ntt_plan) = (params.q, &params.ntt_plan);
 
     let (pk, sk) = keygen(&params, &mut rng);
     let m_b = Polynomial::new(vec![0, 1, 0, 1, 1, 0, 1, 0]); // Example binary message
-    let ct = encrypt(&pk, &m_b, &params, inv_t, &mut rng);
+    let pk0_fwd = Fwd::<u64>::new(pk[1].coeffs(), q, ntt_plan);
+    let pk1_fwd = Fwd::<u64>::new(pk[0].coeffs(), q, ntt_plan);
+    let ct = encrypt(pk0_fwd, pk1_fwd, &m_b, &params, inv_t, &mut rng);
+    let sk_fwd = Fwd::<u64>::new(sk.coeffs(), q, ntt_plan);
 
-    c.bench_function("decrypt", |b| b.iter(|| decrypt(&sk, &ct, &params)));
+    c.bench_function("decrypt", |b| {
+        b.iter(|| decrypt(sk_fwd.clone(), &ct, &params))
+    });
 }
 
 fn bench_decrypt_bytes_small(c: &mut Criterion) {
