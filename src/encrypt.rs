@@ -2,7 +2,7 @@ use crate::{
     keygen::PubKey,
     ntt::Fwd,
     utils::{
-        append_block, compress, gen_noise_poly, mod_coeffs, polyadd, polymul_fast2, Parameters,
+        append_block, compress, gen_noise_poly, mod_coeffs2, polyadd, polymul_fast2, Parameters,
     },
 };
 use itertools::Itertools as _;
@@ -34,7 +34,7 @@ pub fn encrypt<Rng: rand::Rng>(
 ) -> [Polynomial<i32>; 2] {
     let (n, q, t, f, ntt_plan) = (params.n, params.q, params.t, &params.f, &params.ntt_plan);
     // Scale the plaintext polynomial. use floor(m*q/t) rather than floor (q/t)*m
-    let scaled_m = mod_coeffs(m * q / t, q);
+    let scaled_m = mod_coeffs2(m * q / t, q, &params.q_inv);
 
     // Generate random polynomials
     let e1 = gen_noise_poly(n, rng);
@@ -43,12 +43,25 @@ pub fn encrypt<Rng: rand::Rng>(
 
     // Compute ciphertext components
     let ct0 = polyadd(
-        &polyadd(&polymul_fast2(pk0_fwd, &u, q, ntt_plan), &e1, q, f),
+        &polyadd(
+            &polymul_fast2(pk0_fwd, &u, q, &params.q_inv, ntt_plan),
+            &e1,
+            q,
+            &params.q_inv,
+            f,
+        ),
         &scaled_m,
         q,
+        &params.q_inv,
         f,
     );
-    let ct1 = polyadd(&polymul_fast2(pk1_fwd, &u, q, ntt_plan), &e2, q, f);
+    let ct1 = polyadd(
+        &polymul_fast2(pk1_fwd, &u, q, &params.q_inv, ntt_plan),
+        &e2,
+        q,
+        &params.q_inv,
+        f,
+    );
 
     [ct0, ct1]
 }

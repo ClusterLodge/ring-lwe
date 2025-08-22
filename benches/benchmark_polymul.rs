@@ -18,7 +18,7 @@ fn benchmark_polymul_uniform(c: &mut Criterion) {
 
     // Time fast multiplication
     c.bench_function("Fast polymul (large)", |b| {
-        b.iter(|| polymul_fast(&poly_0, &poly_1, q, &params.ntt_plan))
+        b.iter(|| polymul_fast(&poly_0, &poly_1, q, &params.q_inv, &params.ntt_plan))
     });
 }
 

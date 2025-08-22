@@ -4,7 +4,7 @@ use ring_lwe::utils::Parameters;
 
 fn bench_distr_weighted_alias_index_new(c: &mut Criterion) {
     let params = Parameters::default();
-    let weights: Vec<_> = (0..params.q).map(|idx| idx * idx).collect(); // not quite realistic
+    let weights: Vec<_> = (0..params.q).collect(); // not quite realistic
     c.bench_function("random WeightedAliasIndex::new", |b| {
         b.iter(|| rand_distr::weighted::WeightedAliasIndex::new(weights.clone()).unwrap())
     });
@@ -12,7 +12,7 @@ fn bench_distr_weighted_alias_index_new(c: &mut Criterion) {
 
 fn bench_distr_weighted_alias_index_gen(c: &mut Criterion) {
     let params = Parameters::default();
-    let weights: Vec<_> = (0..params.q).map(|idx| idx * idx).collect(); // not quite realistic
+    let weights: Vec<_> = (0..params.q).collect(); // not quite realistic
     let gen = rand_distr::weighted::WeightedAliasIndex::new(weights.clone()).unwrap();
     // we use 8 times less data because it works with bytes, and we use normal
     // size for ternary because it is works with bits.
@@ -30,7 +30,7 @@ fn bench_distr_weighted_alias_index_gen(c: &mut Criterion) {
 
 fn bench_distr_weighted_index_new(c: &mut Criterion) {
     let params = Parameters::default();
-    let weights: Vec<_> = (0..params.q).map(|idx| idx * idx).collect(); // not quite realistic
+    let weights: Vec<_> = (0..params.q).collect(); // not quite realistic
     c.bench_function("random WeightedIndex::new", |b| {
         b.iter(|| rand_distr::weighted::WeightedIndex::new(weights.clone()).unwrap())
     });
@@ -38,7 +38,7 @@ fn bench_distr_weighted_index_new(c: &mut Criterion) {
 
 fn bench_distr_weighted_index_gen(c: &mut Criterion) {
     let params = Parameters::default();
-    let weights: Vec<_> = (0..params.q).map(|idx| idx * idx).collect(); // not quite realistic
+    let weights: Vec<_> = (0..params.q).collect(); // not quite realistic
     let gen = rand_distr::weighted::WeightedIndex::new(weights).unwrap();
     // we use 8 times less data because it works with bytes, and we use normal
     // size for ternary because it is works with bits.

@@ -5,11 +5,13 @@ use polynomial_ring::Polynomial;
 use rand_distr::{Distribution, Normal, Uniform};
 
 /// Ring-LWE parameters
-#[derive(Debug)]
+// #[derive(Debug)]
 pub struct Parameters {
     pub n: usize, // Polynomial modulus degree
     pub q: i32,   // Ciphertext modulus
-    pub t: i32,   // Plaintext modulus
+    pub q_inv: libdivide::BranchFreeDivider<i32>,
+    pub t: i32, // Plaintext modulus
+    pub t_inv: libdivide::BranchFreeDivider<i32>,
     pub ntt_plan: NttPlan,
     pub f: Polynomial<i32>, // Polynomial modulus (x^n + 1 representation)
     #[allow(dead_code)]
@@ -21,7 +23,9 @@ impl Default for Parameters {
     fn default() -> Self {
         let n = 1024;
         let q = 12289i32;
+        let q_inv = libdivide::BranchFreeDivider::new(q).unwrap();
         let t = 16;
+        let t_inv = libdivide::BranchFreeDivider::new(t).unwrap();
         let ntt_plan = NttPlan::try_new(n, q as u32).expect("Failed to create NTT plan");
         let mut poly_vec = vec![0i32; n + 1];
         poly_vec[0] = 1;
@@ -31,7 +35,9 @@ impl Default for Parameters {
         Parameters {
             n,
             q,
+            q_inv,
             t,
+            t_inv,
             ntt_plan,
             f,
             sigma,
@@ -54,6 +60,28 @@ pub fn mod_coeffs(x: Polynomial<i32>, modulus: i32) -> Polynomial<i32> {
         let mut newcoeffs = Vec::with_capacity(coeffs.len());
         newcoeffs.extend(coeffs.iter().cloned().map(|coeff| {
             let mut c = coeff.rem_euclid(modulus);
+            if c > modulus / 2 {
+                c -= modulus;
+            }
+            c
+        }));
+        Polynomial::new(newcoeffs)
+    }
+}
+
+pub fn mod_coeffs2(
+    x: Polynomial<i32>,
+    modulus: i32,
+    modulus_inv: &libdivide::BranchFreeDivider<i32>,
+) -> Polynomial<i32> {
+    let coeffs = x.coeffs();
+    if coeffs.is_empty() {
+        // return original input for the zero polynomial
+        x
+    } else {
+        let mut newcoeffs = Vec::with_capacity(coeffs.len());
+        newcoeffs.extend(coeffs.iter().cloned().map(|coeff| {
+            let mut c = coeff - (coeff / modulus_inv) * modulus;
             if c > modulus / 2 {
                 c -= modulus;
             }
@@ -132,16 +160,18 @@ pub fn polymul_fast(
     x: &Polynomial<i32>,
     y: &Polynomial<i32>,
     q: i32,
+    q_inv: &libdivide::BranchFreeDivider<i32>,
     ntt_plan: &NttPlan,
 ) -> Polynomial<i32> {
     let x_fwd = Fwd::<u32>::new(x.coeffs(), q, ntt_plan);
-    polymul_fast2(x_fwd, y, q, ntt_plan)
+    polymul_fast2(x_fwd, y, q, q_inv, ntt_plan)
 }
 
 pub fn polymul_fast2(
     x_fwd: Fwd<u32>,
     y: &Polynomial<i32>,
     q: i32,
+    q_inv: &libdivide::BranchFreeDivider<i32>,
     ntt_plan: &NttPlan,
 ) -> Polynomial<i32> {
     let y_fwd = Fwd::<u32>::new(y.coeffs(), q, ntt_plan);
@@ -150,7 +180,7 @@ pub fn polymul_fast2(
     // Construct the result polynomial and reduce modulo f
     let r = Polynomial::new(r_coeffs);
     // let r = polyrem(r, f);
-    mod_coeffs(r, q)
+    mod_coeffs2(r, q, q_inv)
 }
 
 fn polymul_ntt(x: Fwd<u32>, y: Fwd<u32>, _q: i32, ntt_plan: &NttPlan) -> Vec<i32> {
@@ -175,12 +205,13 @@ pub fn polyadd(
     x: &Polynomial<i32>,
     y: &Polynomial<i32>,
     modulus: i32,
+    modulus_inv: &libdivide::BranchFreeDivider<i32>,
     f: &Polynomial<i32>,
 ) -> Polynomial<i32> {
     let mut r = x + y;
     r = polyrem(r, f);
     if modulus != 0 {
-        mod_coeffs(r, modulus)
+        mod_coeffs2(r, modulus, modulus_inv)
     } else {
         r
     }
@@ -215,9 +246,10 @@ pub fn polysub(
     x: &Polynomial<i32>,
     y: &Polynomial<i32>,
     modulus: i32,
+    modulus_inv: &libdivide::BranchFreeDivider<i32>,
     f: &Polynomial<i32>,
 ) -> Polynomial<i32> {
-    polyadd(x, &polyinv(y, modulus), modulus, f)
+    polyadd(x, &polyinv(y, modulus), modulus, modulus_inv, f)
 }
 
 /// Generate a binary polynomial

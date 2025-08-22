@@ -30,7 +30,7 @@ pub fn test_hom_add() {
     let m0_poly = Polynomial::new(vec![1, 0, 1]);
     let m1_poly = Polynomial::new(vec![0, 0, 1]);
 
-    let plaintext_sum = polyadd(&m0_poly, &m1_poly, t, &f);
+    let plaintext_sum = polyadd(&m0_poly, &m1_poly, t, &params.t_inv, &f);
     let (pk, sk) = keygen(&params, &mut rng);
 
     let inv_t = modinverse::modinverse(t, q).unwrap();
@@ -101,15 +101,16 @@ pub fn test_hom_prod() {
     let c0 = polymul(&u[0], &v[0], params.q, &f);
     let u0v1 = &polymul(&u[0], &v[1], params.q, &f);
     let u1v0 = &polymul(&u[1], &v[0], params.q, &f);
-    let c1 = polyadd(u0v1, u1v0, params.q, &f);
+    let c1 = polyadd(u0v1, u1v0, params.q, &params.q_inv, &f);
     let c2 = polymul(&u[1], &v[1], params.q, &f);
     //compute c0 + c1*s + c2*s*s
     let c1_sk = &polymul(&c1, &sk, params.q, &f);
     let c2_sk_squared = &polymul(&polymul(&c2, &sk, params.q, &f), &sk, params.q, &f);
     let ciphertext_prod = polyadd(
-        &polyadd(&c0, c1_sk, params.q, &f),
+        &polyadd(&c0, c1_sk, params.q, &params.q_inv, &f),
         c2_sk_squared,
         params.q,
+        &params.q_inv,
         &f,
     );
     //let delta = q / t, divide coeffs by 1 / delta^2
@@ -143,7 +144,7 @@ pub fn test_polymul_fast_uniform() {
     let b = gen_uniform_poly(params.n, params.q, &mut rng);
 
     let c_std = polymul(&a, &b, params.q, &params.f);
-    let c_fast = polymul_fast(&a, &b, params.q, &params.ntt_plan);
+    let c_fast = polymul_fast(&a, &b, params.q, &params.q_inv, &params.ntt_plan);
 
     assert_eq!(c_std, c_fast, "test failed: {} != {}", c_std, c_fast);
 }

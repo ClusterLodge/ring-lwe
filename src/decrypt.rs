@@ -27,9 +27,10 @@ pub fn decrypt(
 ) -> Polynomial<i32> {
     let (_n, q, t, f) = (params.n, params.q, params.t, &params.f);
     let scaled_pt = polyadd(
-        &polymul_fast2(sk_fwd, &ct[1], q, &params.ntt_plan),
+        &polymul_fast2(sk_fwd, &ct[1], q, &params.q_inv, &params.ntt_plan),
         &ct[0],
         q,
+        &params.q_inv,
         f,
     );
     let mut decrypted_coeffs = Vec::with_capacity(scaled_pt.coeffs().len());

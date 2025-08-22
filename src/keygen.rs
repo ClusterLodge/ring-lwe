@@ -27,9 +27,10 @@ pub fn keygen<Rng: rand::Rng>(
     let a = gen_uniform_poly(n, q, rng);
     let e = gen_noise_poly(n, rng);
     let b = polyadd(
-        &polymul_fast(&polyinv(&a, q), &sk, q, &params.ntt_plan),
+        &polymul_fast(&polyinv(&a, q), &sk, q, &params.q_inv, &params.ntt_plan),
         &polyinv(&e, q),
         q,
+        &params.q_inv,
         f,
     ); // b = -a*sk - e
 
